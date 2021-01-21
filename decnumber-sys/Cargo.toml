@@ -1,0 +1,22 @@
+[package]
+name = "decnumber-sys"
+authors = ["Materialize, Inc."]
+readme = "../README.md"
+description = "Low-level bindings for libdecnumber."
+documentation = "https://docs.rs/decnumber-sys"
+repository = "https://github.com/MaterializeInc/rust-decnumber"
+license = "ICU"
+categories = ["external-ffi-bindings"]
+version = "0.1.0"
+edition = "2018"
+links = "decnumber"
+
+[dependencies]
+libc = "0.2.82"
+
+[dev-dependencies]
+c_str_macro = "1.0.2"
+version-sync = "0.9"
+
+[build-dependencies]
+cc = "1.0.50"

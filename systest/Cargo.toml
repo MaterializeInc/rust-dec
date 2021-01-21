@@ -1,0 +1,13 @@
+[package]
+name = "systest"
+description = "ctest generator for decnumber-sys"
+version = "0.0.0"
+edition = "2018"
+publish = false
+
+[dependencies]
+decnumber-sys = { path = "../decnumber-sys" }
+libc = "0.2.68"
+
+[build-dependencies]
+ctest = "0.2"

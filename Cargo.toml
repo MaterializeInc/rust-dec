@@ -1,0 +1,7 @@
+[workspace]
+members = [
+  "dec",
+  "decnumber-sys",
+  "dectest",
+  "systest",
+]

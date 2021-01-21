@@ -1,0 +1,45 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build: ubuntu
+            os: ubuntu-latest
+            rust: stable
+          - build: ubuntu
+            os: ubuntu-latest
+            rust: nightly
+          - build: macos
+            os: macos-latest
+            rust: stable
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - name: Install Rust (rustup)
+      run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
+    - run: cd decnumber-sys && cargo test
+    - run: cd systest && cargo run
+    - run: cd dectest && cargo run -- -b decimal32 ../testdata/decSingle.decTest
+    - run: cd dectest && cargo run -- -b decimal64 ../testdata/decDouble.decTest
+    - run: cd dectest && cargo run -- -b decimal128 ../testdata/decQuad.decTest
+    - run: cd dectest && cargo run --features=arbitrary-precision -- -b decimal ../testdata/testall.decTest
+      if: ${{ matrix.rust == 'nightly' }}
+    - run: cargo test
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - name: Install Rust
+      run: rustup update stable && rustup default stable && rustup component add rustfmt
+    - run: cargo fmt -- --check

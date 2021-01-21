@@ -1,0 +1,54 @@
+diff --git a/decimal128.h b/decimal128.h
+index df72acf..8f6b315 100644
+--- a/decimal128.h
++++ b/decimal128.h
+@@ -49,8 +49,13 @@
+   #endif
+
+   /* Decimal 128-bit type, accessible by bytes                        */
+-  typedef struct {
++  typedef union {
+     uint8_t bytes[DECIMAL128_Bytes]; /* decimal128: 1, 5, 12, 110 bits*/
++    uint16_t shorts[DECIMAL128_Bytes/2];
++    uint32_t  words[DECIMAL128_Bytes/4];
++    #if DECUSE64
++    uint64_t  longs[DECIMAL128_Bytes/8];
++    #endif
+     } decimal128;
+
+   /* special values [top byte excluding sign bit; last two bits are   */
+diff --git a/decimal32.h b/decimal32.h
+index faaf9a9..233f7a8 100644
+--- a/decimal32.h
++++ b/decimal32.h
+@@ -49,8 +49,10 @@
+   #endif
+
+   /* Decimal 32-bit type, accessible by bytes */
+-  typedef struct {
++  typedef union {
+     uint8_t bytes[DECIMAL32_Bytes];     /* decimal32: 1, 5, 6, 20 bits*/
++    uint16_t shorts[DECIMAL32_Bytes/2];
++    uint32_t  words[DECIMAL32_Bytes/4];
+     } decimal32;
+
+   /* special values [top byte excluding sign bit; last two bits are   */
+diff --git a/decimal64.h b/decimal64.h
+index d2782a3..8b5308c 100644
+--- a/decimal64.h
++++ b/decimal64.h
+@@ -51,8 +51,13 @@
+   #endif
+
+   /* Decimal 64-bit type, accessible by bytes                         */
+-  typedef struct {
++  typedef union {
+     uint8_t bytes[DECIMAL64_Bytes];     /* decimal64: 1, 5, 8, 50 bits*/
++    uint16_t shorts[DECIMAL64_Bytes/2];
++    uint32_t  words[DECIMAL64_Bytes/4];
++    #if DECUSE64
++    uint64_t  longs[DECIMAL64_Bytes/8];
++    #endif
+     } decimal64;
+
+   /* special values [top byte excluding sign bit; last two bits are   */

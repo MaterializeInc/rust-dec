@@ -1,0 +1,24 @@
+[package]
+name = "dec"
+authors = ["Materialize, Inc."]
+readme = "../README.md"
+description = "A decimal arithmetic library providing high-level, safe bindings to libdecnumber."
+documentation = "https://docs.rs/dec"
+repository = "https://github.com/MaterializeInc/rust-decnumber"
+license = "Apache-2.0"
+categories = ["api-bindings"]
+keywords = ["decimal", "decnumber"]
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+decnumber-sys = { version = "0.1.0", path = "../decnumber-sys" }
+libc = "0.2.82"
+static_assertions = { version = "1.1.0", optional = true }
+
+[features]
+arbitrary-precision = ["static_assertions"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

@@ -1,0 +1,46 @@
+From 789eadcd54ffe62037461a4a22c2737ad9cbd01e Mon Sep 17 00:00:00 2001
+From: Marek Polacek <polacek@redhat.com>
+Date: Thu, 23 Jan 2014 19:04:29 +0000
+Subject: [PATCH] re PR c/59871 (No unused value warning for comma expression)
+
+	PR c/59871
+c/
+	* c-typeck.c (build_compound_expr): Warn even for right-hand operand
+	of a comma expression.
+	(emit_side_effect_warnings): Likewise.
+libdecnumber/
+	* decNumberLocal.h (UBFROMUS, UBFROMUI): Remove last argument.
+testsuite/
+	* gcc.dg/20020220-2.c: Adjust dg-warning message.
+	* gcc.dg/pr59871.c: New test.
+
+From-SVN: r207002
+---
+ gcc/c/ChangeLog                   |  7 +++++++
+ gcc/c/c-typeck.c                  | 34 +++++++++++++++++++++++++++++++
+ gcc/testsuite/ChangeLog           |  6 ++++++
+ gcc/testsuite/gcc.dg/20020220-2.c |  4 ++--
+ gcc/testsuite/gcc.dg/pr59871.c    | 22 ++++++++++++++++++++
+ libdecnumber/ChangeLog            |  5 +++++
+ libdecnumber/decNumberLocal.h     |  7 +++----
+ 7 files changed, 79 insertions(+), 6 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.dg/pr59871.c
+
+diff --git a/decNumberLocal.h b/decNumberLocal.h
+index 94e7f7f9b1f7..4936231f2a2b 100644
+--- a/decNumberLocal.h
++++ b/decNumberLocal.h
+@@ -153,10 +153,9 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+   #define UBTOUI(b)  (memcpy((void *)&uiwork, b, 4), uiwork)
+
+   /* Store a uInt, etc., into bytes starting at a char* or uByte*.    */
+-  /* Returns i, evaluated, for convenience; has to use uiwork because */
+-  /* i may be an expression.                                          */
+-  #define UBFROMUS(b, i)  (uswork=(i), memcpy(b, (void *)&uswork, 2), uswork)
+-  #define UBFROMUI(b, i)  (uiwork=(i), memcpy(b, (void *)&uiwork, 4), uiwork)
++  /* Has to use uiwork because i may be an expression.		      */
++  #define UBFROMUS(b, i)  (uswork=(i), memcpy(b, (void *)&uswork, 2))
++  #define UBFROMUI(b, i)  (uiwork=(i), memcpy(b, (void *)&uiwork, 4))
+
+   /* X10 and X100 -- multiply integer i by 10 or 100                  */
+   /* [shifts are usually faster than multiply; could be conditional]  */
