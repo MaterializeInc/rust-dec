@@ -26,8 +26,8 @@ use libc::c_char;
 use crate::context::{Class, Context};
 #[cfg(feature = "arbitrary-precision")]
 use crate::decimal::Decimal;
-use crate::decimal32::Decimal32;
 use crate::decimal128::Decimal128;
+use crate::decimal32::Decimal32;
 use crate::error::ParseDecimalError;
 
 /// A 64-bit decimal floating-point number.

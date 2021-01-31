@@ -50,27 +50,26 @@
 //! The main types exposed by this library are as follows:
 //!
 //!  * [`Decimal32`], a 32-bit decimal floating-point representation which
-//!    provides 7 decimal digits of precision in a compressed format. This
-//!    type is intended for storage and interchange only and so does not support
-//!    any arithmetic functions.
+//!    provides 7 decimal digits of precision in a compressed format. This type
+//!    is intended for storage and interchange only and so does not support any
+//!    arithmetic functions.
 //!
 //!  * [`Decimal64`], a 64-bit decimal floating-point representation which
-//!    provides 16 decimal digits of precision in a compressed format along
-//!    with various arithmetic functions.
+//!    provides 16 decimal digits of precision in a compressed format along with
+//!    various arithmetic functions.
 //!
 //!  * [`Decimal128`], a 128-bit decimal floating-point representation which
-//!    provides 34 decimal digits of precision in a compressed format along
-//!    with various arithmetic functions.
+//!    provides 34 decimal digits of precision in a compressed format along with
+//!    various arithmetic functions.
 //!
-//!  * [`Decimal`], a decimal representation with precision configurable via its
-//!    generic `N` parameter. This type requires Rust's `min_const_generics`
+//!  * [`Decimal`], a decimal representation whose precision is configurable via
+//!    its generic `N` parameter. This type requires Rust's `min_const_generics`
 //!    feature, which is scheduled to stabilize in Rust 1.51.0. This type is
 //!    only available when the `arbitrary-precision` feature is activated.
 //!
-//!  * [`Context`], which hosts most of the actual functions on the above
-//!    types. A context configures the behavior of the various operations
-//!    (e.g., rounding mode) and accumulates exceptional conditions
-//!    (e.g., overflow).
+//!  * [`Context`], which hosts most of the actual functions on the above types.
+//!    A context configures the behavior of the various operations (e.g.,
+//!    rounding mode) and accumulates exceptional conditions (e.g., overflow).
 //!
 //! # Examples
 //!
@@ -93,7 +92,6 @@
 //! [faq]: http://speleotrove.com/decimal/decifaq.html
 //! [libdecnumber]: http://speleotrove.com/decimal/decarith.html
 //! [decnumber-sys]: https://docs.rs/decnumber-sys
-//!
 
 #![deny(missing_debug_implementations, missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
