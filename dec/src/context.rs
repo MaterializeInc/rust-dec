@@ -85,7 +85,7 @@ impl<D> Context<D> {
 /// chapter of the General Decimal Arithmetic specification.
 ///
 /// [model]: http://speleotrove.com/decimal/damodel.html
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Rounding {
     /// Round towards positive infinity.
     Ceiling,
@@ -151,7 +151,7 @@ impl Rounding {
 /// Arithmetic specification.
 ///
 /// [conditions]: http://speleotrove.com/decimal/daexcep.html
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Status {
     inner: u32,
 }
@@ -272,7 +272,7 @@ impl Status {
 /// of the General Decimal Arithmetic specification.
 ///
 /// [model]: http://speleotrove.com/decimal/damodel.html
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Class {
     /// Signaling NaN ("Not a Number").
     SignalingNan,

@@ -8,6 +8,7 @@ Versioning].
 ## 0.1.1 - 2020-01-31
 
 * Correct documentation links in README.
+* Implement `Hash` for the `Class`, `Rounding` and `Status` types.
 
 ## 0.1.0 - 2020-01-31
 
