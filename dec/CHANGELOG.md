@@ -9,6 +9,7 @@ Versioning].
 
 * Correct documentation links in README.
 * Implement `Hash` for the `Class`, `Rounding` and `Status` types.
+* Include fields in `fmt::Debug` output for `Status`.
 
 ## 0.1.0 - 2020-01-31
 

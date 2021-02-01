@@ -151,9 +151,30 @@ impl Rounding {
 /// Arithmetic specification.
 ///
 /// [conditions]: http://speleotrove.com/decimal/daexcep.html
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Status {
     inner: u32,
+}
+
+impl fmt::Debug for Status {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Status")
+            .field("conversion_syntax", &self.conversion_syntax())
+            .field("division_by_zero", &self.division_by_zero())
+            .field("division_impossible", &self.division_impossible())
+            .field("division_undefined", &self.division_undefined())
+            .field("insufficient_storage", &self.insufficient_storage())
+            .field("inexact", &self.inexact())
+            .field("invalid_context", &self.invalid_context())
+            .field("invalid_operation", &self.invalid_operation())
+            .field("overflow", &self.overflow())
+            .field("clamped", &self.clamped())
+            .field("rounded", &self.rounded())
+            .field("subnormal", &self.subnormal())
+            .field("underflow", &self.underflow())
+            .field("raw", &self.inner)
+            .finish()
+    }
 }
 
 impl Status {
