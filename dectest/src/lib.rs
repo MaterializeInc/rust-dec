@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Test runner for the General Decimal Arithmetic test cases.
+//!
+//! See <http://speleotrove.com/decimal/dectest.html> for details.
+
 pub mod ast;
 pub mod backend;
 pub mod parse;

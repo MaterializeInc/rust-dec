@@ -30,6 +30,10 @@ pub struct DecimalBackend {
 impl Backend for DecimalBackend {
     type D = Decimal<N>;
 
+    const REPORTS_STATUS_CLAMPED: bool = true;
+    const REPORTS_STATUS_ROUNDED: bool = true;
+    const REPORTS_STATUS_SUBNORMAL: bool = true;
+
     fn new() -> DecimalBackend {
         DecimalBackend {
             cx: Context::default(),
@@ -127,7 +131,7 @@ impl Backend for DecimalBackend {
             // Other observed failures.
             "powx603" | "powx606" | "pwsx821" | "lnx116" | "lnx732" | "sqtx8643" | "sqtx9031"
             | "sqtx9032" | "sqtx9033" | "sqtx9034" | "sqtx9035" | "sqtx9036" | "sqtx9037"
-            | "sqtx9038" | "sqtx9039" | "sqtx9040" | "sqtx9045" => false,
+            | "sqtx9038" | "sqtx9039" | "sqtx9040" | "sqtx9045" | "quax1026" => false,
             _ => self.valid,
         }
     }

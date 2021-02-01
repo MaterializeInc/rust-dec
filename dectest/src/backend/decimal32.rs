@@ -27,6 +27,10 @@ pub struct Decimal32Backend {
 impl Backend for Decimal32Backend {
     type D = Decimal32;
 
+    const REPORTS_STATUS_CLAMPED: bool = false;
+    const REPORTS_STATUS_ROUNDED: bool = false;
+    const REPORTS_STATUS_SUBNORMAL: bool = false;
+
     fn new() -> Decimal32Backend {
         Decimal32Backend {
             cx: Context::default(),

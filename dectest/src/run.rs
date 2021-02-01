@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::error::Error;
 use std::fmt;
@@ -377,9 +378,68 @@ where
         }
     }
 
-    // TODO(benesch): check status flags.
+    let mut test_conditions = test.conditions.clone();
+    if !B::REPORTS_STATUS_CLAMPED {
+        test_conditions.remove(&ast::Condition::Clamped);
+    }
+    if !B::REPORTS_STATUS_ROUNDED {
+        test_conditions.remove(&ast::Condition::Rounded);
+    }
+    if !B::REPORTS_STATUS_SUBNORMAL {
+        test_conditions.remove(&ast::Condition::Subnormal);
+    }
 
-    Ok(())
+    let mut conditions = HashSet::new();
+    if backend.status().conversion_syntax() {
+        conditions.insert(ast::Condition::ConversionSyntax);
+    }
+    if backend.status().division_by_zero() {
+        conditions.insert(ast::Condition::DivisionByZero);
+    }
+    if backend.status().division_impossible() {
+        conditions.insert(ast::Condition::DivisionImpossible);
+    }
+    if backend.status().division_undefined() {
+        conditions.insert(ast::Condition::DivisionUndefined);
+    }
+    if backend.status().insufficient_storage() {
+        conditions.insert(ast::Condition::InsufficientStorage);
+    }
+    if backend.status().inexact() {
+        conditions.insert(ast::Condition::Inexact);
+    }
+    if backend.status().invalid_context() {
+        conditions.insert(ast::Condition::InvalidContext);
+    }
+    if backend.status().invalid_operation() {
+        conditions.insert(ast::Condition::InvalidOperation);
+    }
+    if backend.status().overflow() {
+        conditions.insert(ast::Condition::Overflow);
+    }
+    if backend.status().rounded() {
+        conditions.insert(ast::Condition::Rounded);
+    }
+    // This is undocumented, but it seems the following informational conditions
+    // are not *required* to be listed in the test case when they occur.
+    if backend.status().clamped() && test_conditions.contains(&ast::Condition::Clamped) {
+        conditions.insert(ast::Condition::Clamped);
+    }
+    if backend.status().subnormal() && test_conditions.contains(&ast::Condition::Subnormal) {
+        conditions.insert(ast::Condition::Subnormal);
+    }
+    if backend.status().underflow() && test_conditions.contains(&ast::Condition::Underflow) {
+        conditions.insert(ast::Condition::Underflow);
+    }
+
+    if test_conditions == conditions {
+        Ok(())
+    } else {
+        Err(BackendError::failure(format!(
+            "expected conditions {:?}, but got {:?}",
+            test_conditions, conditions
+        )))
+    }
 }
 
 fn parse_operand<B>(backend: &mut B, operand: &str) -> BackendResult<B::D>
@@ -522,8 +582,8 @@ fn check_result_str(expected: &str, actual: &str) -> Result<(), BackendError> {
         Ok(())
     } else {
         Err(BackendError::failure(format!(
-            "got {} but expected {}",
-            actual, expected
+            "expected result {}, but got {}",
+            expected, actual
         )))
     }
 }

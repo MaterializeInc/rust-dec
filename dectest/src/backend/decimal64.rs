@@ -27,6 +27,10 @@ pub struct Decimal64Backend {
 impl Backend for Decimal64Backend {
     type D = Decimal64;
 
+    const REPORTS_STATUS_CLAMPED: bool = false;
+    const REPORTS_STATUS_ROUNDED: bool = false;
+    const REPORTS_STATUS_SUBNORMAL: bool = false;
+
     fn new() -> Decimal64Backend {
         Decimal64Backend {
             cx: Context::default(),

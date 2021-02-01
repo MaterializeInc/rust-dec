@@ -64,6 +64,10 @@ pub type BackendResult<T> = Result<T, BackendError>;
 pub trait Backend {
     type D: fmt::Display + Clone;
 
+    const REPORTS_STATUS_CLAMPED: bool;
+    const REPORTS_STATUS_ROUNDED: bool;
+    const REPORTS_STATUS_SUBNORMAL: bool;
+
     fn new() -> Self;
 
     fn nan() -> Self::D;

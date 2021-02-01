@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashSet;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -62,9 +63,9 @@ fn parse_line(cx: &Context, buf: &mut LexBuf) -> Result<Option<ast::Line>, Box<d
             return Err(format!("missing \"->\" token").into());
         }
         let result = require_token(buf, "result")?;
-        let mut conditions = vec![];
+        let mut conditions = HashSet::new();
         while let Some(condition) = parse_token(buf) {
-            conditions.push(condition.parse()?);
+            conditions.insert(condition.parse()?);
         }
         Ok(Some(ast::Line::Test(ast::Test {
             id,

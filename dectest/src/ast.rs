@@ -13,22 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashSet;
 use std::fmt;
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct File {
     pub path: PathBuf,
     pub lines: Vec<Line>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Line {
     Directive(Directive),
     Test(Test),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Directive {
     Clamp(bool),
     DecTest(File),
@@ -67,15 +68,15 @@ impl fmt::Display for Directive {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Test {
     pub id: String,
     pub operation: Operation,
     pub result: String,
-    pub conditions: Vec<Condition>,
+    pub conditions: HashSet<Condition>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Operation {
     Abs(String),
     Add(String, String),
@@ -188,7 +189,7 @@ impl fmt::Display for Operation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Condition {
     Clamped,
     ConversionSyntax,

@@ -27,6 +27,10 @@ pub struct Decimal128Backend {
 impl Backend for Decimal128Backend {
     type D = Decimal128;
 
+    const REPORTS_STATUS_CLAMPED: bool = false;
+    const REPORTS_STATUS_ROUNDED: bool = false;
+    const REPORTS_STATUS_SUBNORMAL: bool = false;
+
     fn new() -> Decimal128Backend {
         Decimal128Backend {
             cx: Context::default(),
