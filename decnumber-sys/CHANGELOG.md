@@ -5,7 +5,7 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## 0.1.1 - 2020-01-31
+## 0.1.1 - 2020-02-01
 
 * Correct documentation links in README.
 
