@@ -49,7 +49,7 @@ use crate::error::ParseDecimalError;
 /// context, which has some performance overhead. For maximum performance when
 /// performing operations in bulk, use a long-lived context that you construct
 /// yourself.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct Decimal64 {
     pub(crate) inner: decnumber_sys::decDouble,
 }

@@ -1009,7 +1009,7 @@ extern "C" {
 }
 
 #[repr(C, align(4))]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub struct decimal32 {
     pub bytes: [u8; 4usize],
 }
@@ -1045,7 +1045,7 @@ extern "C" {
 }
 
 #[repr(C, align(4))]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub struct decimal64 {
     pub bytes: [u8; 8usize],
 }
@@ -1069,7 +1069,7 @@ extern "C" {
 }
 
 #[repr(C, align(4))]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub struct decimal128 {
     pub bytes: [u8; 16usize],
 }

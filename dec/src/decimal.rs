@@ -50,7 +50,7 @@ fn validate_n(n: usize) {
 /// at compile time, so they are checked at runtime.
 #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary-precision")))]
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct Decimal<const N: usize> {
     digits: u32,
     exponent: i32,
