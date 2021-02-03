@@ -16,6 +16,7 @@
 use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign};
@@ -346,6 +347,15 @@ impl PartialOrd for Decimal128 {
 impl Ord for Decimal128 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.total_cmp(other)
+    }
+}
+
+impl Hash for Decimal128 {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.canonical().inner.bytes.hash(state)
     }
 }
 

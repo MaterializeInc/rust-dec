@@ -18,11 +18,12 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::error::Error;
 use std::fmt;
+use std::hash::Hasher;
 
 use dec::{Decimal128, Decimal32, Decimal64};
 
 use crate::ast;
-use crate::backend::{Backend, BackendError, BackendResult};
+use crate::backend::{Backend, BackendError, BackendResult, Decimal128Backend, Decimal64Backend};
 
 pub enum Outcome {
     Passed,
@@ -167,7 +168,8 @@ where
         ast::Operation::CompareTotal(lhs, rhs) => {
             let lhs = parse_operand(backend, lhs)?;
             let rhs = parse_operand(backend, rhs)?;
-            let result = match backend.total_cmp(lhs, rhs)? {
+            check_hash(backend, &lhs, &rhs)?;
+            let result = match backend.total_cmp(lhs.clone(), rhs.clone())? {
                 Ordering::Less => parse_operand(backend, "-1")?,
                 Ordering::Equal => parse_operand(backend, "0")?,
                 Ordering::Greater => parse_operand(backend, "1")?,
@@ -299,8 +301,9 @@ where
         }
         ast::Operation::Reduce(n) => {
             let n = parse_operand(backend, n)?;
-            let result = backend.reduce(n)?;
+            let result = backend.reduce(n.clone())?;
             check_result(backend, &test.result, &result)?;
+            check_hash(backend, &n, &result)?;
         }
         ast::Operation::Remainder(lhs, rhs) => {
             let lhs = parse_operand(backend, lhs)?;
@@ -569,9 +572,20 @@ where
 
     let actual = match &expected {
         Expected::Decimal32(_) => backend.to_decimal32(actual).to_string(),
-        Expected::Decimal64(_) => backend.to_decimal64(actual).to_string(),
-        Expected::Decimal128(_) => backend.to_decimal128(actual).to_string(),
-        Expected::Backend(_) => actual.to_string(),
+        Expected::Decimal64(expected) => {
+            let actual = backend.to_decimal64(actual);
+            check_hash(&mut Decimal64Backend::new(), expected, &actual)?;
+            actual.to_string()
+        }
+        Expected::Decimal128(expected) => {
+            let actual = backend.to_decimal128(actual);
+            check_hash(&mut Decimal128Backend::new(), expected, &actual)?;
+            actual.to_string()
+        }
+        Expected::Backend(expected) => {
+            check_hash(&mut B::new(), expected, &actual)?;
+            actual.to_string()
+        }
     };
 
     check_result_str(&expected.to_string(), &actual)
@@ -585,5 +599,61 @@ fn check_result_str(expected: &str, actual: &str) -> Result<(), BackendError> {
             "expected result {}, but got {}",
             expected, actual
         )))
+    }
+}
+
+fn check_hash<B>(backend: &mut B, lhs: &B::D, rhs: &B::D) -> Result<(), BackendError>
+where
+    B: Backend,
+{
+    #[derive(Default)]
+    struct ValidatingHasher {
+        bytes: Vec<u8>,
+    }
+
+    impl Hasher for ValidatingHasher {
+        fn write(&mut self, bytes: &[u8]) {
+            self.bytes.extend(bytes)
+        }
+
+        fn finish(&self) -> u64 {
+            unimplemented!()
+        }
+    }
+
+    fn hash_data<B>(n: &B::D) -> Vec<u8>
+    where
+        B: Backend,
+    {
+        let mut hasher = ValidatingHasher::default();
+        B::hash(n, &mut hasher);
+        hasher.bytes
+    }
+
+    if !B::HASHABLE {
+        return Ok(());
+    }
+
+    if let Ordering::Equal = backend.total_cmp(lhs.clone(), rhs.clone())? {
+        if hash_data::<B>(lhs) == hash_data::<B>(rhs) {
+            Ok(())
+        } else {
+            Err(BackendError::failure(format!(
+                "{} and {} are equal but hashes are not equal",
+                lhs, rhs
+            )))
+        }
+    } else {
+        // This is technically a stronger property than required (i.e., only
+        // false positives are prohibited, and false negatives are okay), but
+        // we provide it, so might as well verify it.
+        if hash_data::<B>(lhs) == hash_data::<B>(rhs) {
+            Err(BackendError::failure(format!(
+                "{} and {} are equal but hashes are equal",
+                lhs, rhs
+            )))
+        } else {
+            Ok(())
+        }
     }
 }

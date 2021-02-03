@@ -14,6 +14,7 @@
 // limitations under the License
 
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 use dec::{Class, Context, Decimal128, Decimal32, Decimal64, Rounding, Status};
@@ -27,6 +28,7 @@ pub struct Decimal64Backend {
 impl Backend for Decimal64Backend {
     type D = Decimal64;
 
+    const HASHABLE: bool = true;
     const REPORTS_STATUS_CLAMPED: bool = false;
     const REPORTS_STATUS_ROUNDED: bool = false;
     const REPORTS_STATUS_SUBNORMAL: bool = false;
@@ -70,6 +72,13 @@ impl Backend for Decimal64Backend {
 
     fn to_decimal128(&mut self, n: &Self::D) -> Decimal128 {
         Decimal128::from(*n)
+    }
+
+    fn hash<H>(n: &Self::D, state: &mut H)
+    where
+        H: Hasher,
+    {
+        n.hash(state)
     }
 
     fn status(&self) -> Status {

@@ -16,6 +16,7 @@
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
+use std::hash::Hasher;
 
 use dec::{Class, Decimal128, Decimal32, Decimal64, Rounding, Status};
 
@@ -64,6 +65,7 @@ pub type BackendResult<T> = Result<T, BackendError>;
 pub trait Backend {
     type D: fmt::Display + Clone;
 
+    const HASHABLE: bool;
     const REPORTS_STATUS_CLAMPED: bool;
     const REPORTS_STATUS_ROUNDED: bool;
     const REPORTS_STATUS_SUBNORMAL: bool;
@@ -78,6 +80,9 @@ pub trait Backend {
     fn to_decimal32(&mut self, n: &Self::D) -> Decimal32;
     fn to_decimal64(&mut self, n: &Self::D) -> Decimal64;
     fn to_decimal128(&mut self, n: &Self::D) -> Decimal128;
+    fn hash<H>(n: &Self::D, state: &mut H)
+    where
+        H: Hasher;
 
     fn status(&self) -> Status;
     fn clear_status(&mut self);

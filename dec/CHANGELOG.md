@@ -5,6 +5,10 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## Unreleased
+
+* Add `Hash` implementations for `Decimal64` and `Decimal128`.
+
 ## 0.1.2 - 2020-02-01
 
 * Correct documentation links in README, again.
