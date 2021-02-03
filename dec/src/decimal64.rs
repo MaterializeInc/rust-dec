@@ -55,11 +55,19 @@ pub struct Decimal64 {
 }
 
 impl Decimal64 {
-    /// Constructs a 128-bit decimal floating-point number representing the
-    /// number 0.
-    pub fn zero() -> Decimal64 {
-        Decimal64::default()
-    }
+    /// The value that represents Not-a-Number (NaN).
+    pub const NAN: Decimal64 = Decimal64::from_ne_bytes(if cfg!(target_endian = "little") {
+        [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x7c]
+    } else {
+        [0x7c, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+    });
+
+    /// The value that represents zero.
+    pub const ZERO: Decimal64 = Decimal64::from_ne_bytes(if cfg!(target_endian = "little") {
+        [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x38, 0x22]
+    } else {
+        [0x22, 0x38, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+    });
 
     /// Creates a number from its representation as a little-endian byte array.
     pub fn from_le_bytes(mut bytes: [u8; 8]) -> Decimal64 {
@@ -79,7 +87,7 @@ impl Decimal64 {
 
     /// Creates a number from its representation as a byte array in the
     /// native endianness of the target platform.
-    pub fn from_ne_bytes(bytes: [u8; 8]) -> Decimal64 {
+    pub const fn from_ne_bytes(bytes: [u8; 8]) -> Decimal64 {
         Decimal64 {
             inner: decnumber_sys::decDouble { bytes },
         }
@@ -252,12 +260,7 @@ impl Decimal64 {
 
 impl Default for Decimal64 {
     fn default() -> Decimal64 {
-        let mut d = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d = unsafe {
-            decnumber_sys::decDoubleZero(d.as_mut_ptr());
-            d.assume_init()
-        };
-        Decimal64 { inner: d }
+        Decimal64::ZERO
     }
 }
 
@@ -327,23 +330,15 @@ impl From<Decimal32> for Decimal64 {
     }
 }
 
-impl PartialEq for Decimal64 {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
-    }
-}
-
-impl Eq for Decimal64 {}
-
 impl PartialOrd for Decimal64 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+        Context::<Decimal64>::default().partial_cmp(*self, *other)
     }
 }
 
-impl Ord for Decimal64 {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.total_cmp(other)
+impl PartialEq for Decimal64 {
+    fn eq(&self, other: &Self) -> bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
     }
 }
 
@@ -667,7 +662,8 @@ impl Context<Decimal64> {
     /// order.
     ///
     /// If either `lhs` or `rhs` is a NaN, returns `None`. To force an ordering
-    /// upon NaNs, use [`Decimal64::total_cmp`].
+    /// upon NaNs, use [`Decimal64::total_cmp`] or
+    /// [`OrderedDecimal`](crate::OrderedDecimal).
     pub fn partial_cmp(&mut self, lhs: Decimal64, rhs: Decimal64) -> Option<Ordering> {
         let mut d = MaybeUninit::<decnumber_sys::decDouble>::uninit();
         let d = Decimal64 {

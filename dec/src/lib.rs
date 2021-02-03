@@ -104,6 +104,7 @@ mod decimal128;
 mod decimal32;
 mod decimal64;
 mod error;
+mod ordered;
 
 pub use context::{Class, Context, Rounding, Status};
 #[cfg(feature = "arbitrary-precision")]
@@ -112,3 +113,4 @@ pub use decimal128::Decimal128;
 pub use decimal32::Decimal32;
 pub use decimal64::Decimal64;
 pub use error::{InvalidExponentError, InvalidPrecisionError, ParseDecimalError};
+pub use ordered::OrderedDecimal;

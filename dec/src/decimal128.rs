@@ -55,11 +55,27 @@ pub struct Decimal128 {
 }
 
 impl Decimal128 {
-    /// Constructs a 128-bit decimal floating-point number representing the
-    /// number 0.
-    pub fn zero() -> Decimal128 {
-        Decimal128::default()
-    }
+    /// The value that represents Not-a-Number (NaN).
+    pub const NAN: Decimal128 = Decimal128::from_ne_bytes(if cfg!(target_endian = "little") {
+        [
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x7c,
+        ]
+    } else {
+        [
+            0x7c, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        ]
+    });
+
+    /// The value that represents zero.
+    pub const ZERO: Decimal128 = Decimal128::from_ne_bytes(if cfg!(target_endian = "little") {
+        [
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x08, 0x22,
+        ]
+    } else {
+        [
+            0x22, 0x08, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        ]
+    });
 
     /// Creates a number from its representation as a little-endian byte array.
     pub fn from_le_bytes(mut bytes: [u8; 16]) -> Decimal128 {
@@ -79,7 +95,7 @@ impl Decimal128 {
 
     /// Creates a number from its representation as a byte array in the
     /// native endianness of the target platform.
-    pub fn from_ne_bytes(bytes: [u8; 16]) -> Decimal128 {
+    pub const fn from_ne_bytes(bytes: [u8; 16]) -> Decimal128 {
         Decimal128 {
             inner: decnumber_sys::decQuad { bytes },
         }
@@ -252,12 +268,7 @@ impl Decimal128 {
 
 impl Default for Decimal128 {
     fn default() -> Decimal128 {
-        let mut d = MaybeUninit::<decnumber_sys::decQuad>::uninit();
-        let d = unsafe {
-            decnumber_sys::decQuadZero(d.as_mut_ptr());
-            d.assume_init()
-        };
-        Decimal128 { inner: d }
+        Decimal128::ZERO
     }
 }
 
@@ -329,23 +340,15 @@ impl From<Decimal64> for Decimal128 {
     }
 }
 
-impl PartialEq for Decimal128 {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
-    }
-}
-
-impl Eq for Decimal128 {}
-
 impl PartialOrd for Decimal128 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+        Context::<Decimal128>::default().partial_cmp(*self, *other)
     }
 }
 
-impl Ord for Decimal128 {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.total_cmp(other)
+impl PartialEq for Decimal128 {
+    fn eq(&self, other: &Self) -> bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
     }
 }
 

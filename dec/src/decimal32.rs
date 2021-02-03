@@ -34,11 +34,19 @@ pub struct Decimal32 {
 }
 
 impl Decimal32 {
-    /// Constructs a 128-bit decimal floating-point number representing the
-    /// number 0.
-    pub fn zero() -> Decimal32 {
-        Decimal32::default()
-    }
+    /// The value that represents Not-a-Number (NaN).
+    pub const NAN: Decimal32 = Decimal32::from_ne_bytes(if cfg!(target_endian = "little") {
+        [0x0, 0x0, 0x0, 0x7c]
+    } else {
+        [0x7c, 0x0, 0x0, 0x0]
+    });
+
+    /// The value that represents zero.
+    pub const ZERO: Decimal32 = Decimal32::from_ne_bytes(if cfg!(target_endian = "little") {
+        [0x0, 0x0, 0x50, 0x22]
+    } else {
+        [0x22, 0x50, 0x0, 0x0]
+    });
 
     /// Creates a number from its representation as a little-endian byte array.
     pub fn from_le_bytes(mut bytes: [u8; 4]) -> Decimal32 {
@@ -58,7 +66,7 @@ impl Decimal32 {
 
     /// Creates a number from its representation as a byte array in the
     /// native endianness of the target platform.
-    pub fn from_ne_bytes(bytes: [u8; 4]) -> Decimal32 {
+    pub const fn from_ne_bytes(bytes: [u8; 4]) -> Decimal32 {
         Decimal32 {
             inner: decnumber_sys::decSingle { bytes },
         }
@@ -98,12 +106,7 @@ impl Decimal32 {
 
 impl Default for Decimal32 {
     fn default() -> Decimal32 {
-        let mut d = MaybeUninit::<decnumber_sys::decSingle>::uninit();
-        let d = unsafe {
-            decnumber_sys::decSingleZero(d.as_mut_ptr());
-            d.assume_init()
-        };
-        Decimal32 { inner: d }
+        Decimal32::ZERO
     }
 }
 
