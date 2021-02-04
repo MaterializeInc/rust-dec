@@ -5,10 +5,10 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## Unreleased
+## 0.2.0 - 2020-02-03
 
-* Add the `OrderedDecimal` wrapper type to imbue `Decimal64` and `Decimal128`
-  with implementations of `Ord` and `Hash`, akin to
+* Add the `OrderedDecimal` wrapper type which imbues `Decimal64` and
+  `Decimal128` with implementations of `Ord` and `Hash`, akin to
   `ordered_float::OrderedFloat`. The order used is that of the underlying type's
   `partial_cmp`, except that NaNs are considered equal to themselves and sort
   greater than all other values.
