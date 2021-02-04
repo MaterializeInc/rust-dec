@@ -48,6 +48,13 @@ impl Decimal32 {
         [0x22, 0x50, 0x0, 0x0]
     });
 
+    /// The value that represents one.
+    pub const ONE: Decimal32 = Decimal32::from_ne_bytes(if cfg!(target_endian = "little") {
+        [0x1, 0x0, 0x50, 0x22]
+    } else {
+        [0x22, 0x50, 0x0, 0x1]
+    });
+
     /// Creates a number from its representation as a little-endian byte array.
     pub fn from_le_bytes(mut bytes: [u8; 4]) -> Decimal32 {
         if cfg!(target_endian = "big") {

@@ -16,10 +16,17 @@
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::iter::{Product, Sum};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
+use std::str::FromStr;
 
 use crate::context::Context;
 use crate::decimal128::Decimal128;
+use crate::decimal32::Decimal32;
 use crate::decimal64::Decimal64;
+use crate::error::ParseDecimalError;
 
 /// A wrapper for a decimal number that provides an implementation of [`Ord`]
 /// and [`Hash`].
@@ -154,5 +161,413 @@ impl Hash for OrderedDecimal<Decimal128> {
             Context::<Decimal128>::default().reduce(self.0)
         };
         d.inner.bytes.hash(state)
+    }
+}
+
+impl<D> Default for OrderedDecimal<D>
+where
+    D: Default,
+{
+    fn default() -> Self {
+        OrderedDecimal(D::default())
+    }
+}
+
+impl<D> FromStr for OrderedDecimal<D>
+where
+    D: FromStr<Err = ParseDecimalError>,
+{
+    type Err = ParseDecimalError;
+
+    fn from_str(s: &str) -> Result<OrderedDecimal<D>, ParseDecimalError> {
+        Ok(OrderedDecimal(D::from_str(s)?))
+    }
+}
+
+impl<D> From<i32> for OrderedDecimal<D>
+where
+    D: From<i32>,
+{
+    fn from(n: i32) -> OrderedDecimal<D> {
+        OrderedDecimal(D::from(n))
+    }
+}
+
+impl<D> From<u32> for OrderedDecimal<D>
+where
+    D: From<u32>,
+{
+    fn from(n: u32) -> OrderedDecimal<D> {
+        OrderedDecimal(D::from(n))
+    }
+}
+
+impl<D> From<Decimal32> for OrderedDecimal<D>
+where
+    D: From<Decimal32>,
+{
+    fn from(n: Decimal32) -> OrderedDecimal<D> {
+        OrderedDecimal(D::from(n))
+    }
+}
+
+impl<D> From<Decimal64> for OrderedDecimal<D>
+where
+    D: From<Decimal64>,
+{
+    fn from(n: Decimal64) -> OrderedDecimal<D> {
+        OrderedDecimal(D::from(n))
+    }
+}
+
+impl<D> From<Decimal128> for OrderedDecimal<D>
+where
+    D: From<Decimal128>,
+{
+    fn from(n: Decimal128) -> OrderedDecimal<D> {
+        OrderedDecimal(D::from(n))
+    }
+}
+
+impl<D> Add for OrderedDecimal<D>
+where
+    D: Add<Output = D>,
+{
+    type Output = Self;
+
+    fn add(self, other: OrderedDecimal<D>) -> Self {
+        OrderedDecimal(self.0 + other.0)
+    }
+}
+
+impl<D> Add<D> for OrderedDecimal<D>
+where
+    D: Add<Output = D>,
+{
+    type Output = Self;
+
+    fn add(self, other: D) -> Self {
+        OrderedDecimal(self.0 + other)
+    }
+}
+
+impl Add<OrderedDecimal<Decimal64>> for Decimal64 {
+    type Output = Self;
+
+    fn add(self, other: OrderedDecimal<Decimal64>) -> Self {
+        self + other.0
+    }
+}
+
+impl Add<OrderedDecimal<Decimal128>> for Decimal128 {
+    type Output = Self;
+
+    fn add(self, other: OrderedDecimal<Decimal128>) -> Self {
+        self + other.0
+    }
+}
+
+impl<D> AddAssign for OrderedDecimal<D>
+where
+    D: AddAssign,
+{
+    fn add_assign(&mut self, other: Self) {
+        self.0 += other.0;
+    }
+}
+
+/// Adds inner directly.
+impl<D> AddAssign<D> for OrderedDecimal<D>
+where
+    D: Add<Output = D> + Copy,
+{
+    fn add_assign(&mut self, other: D) {
+        *self = *self + other;
+    }
+}
+
+impl<D> Sub for OrderedDecimal<D>
+where
+    D: Sub<Output = D>,
+{
+    type Output = Self;
+
+    fn sub(self, other: OrderedDecimal<D>) -> Self {
+        OrderedDecimal(self.0 - other.0)
+    }
+}
+
+impl<D> Sub<D> for OrderedDecimal<D>
+where
+    D: Sub<Output = D>,
+{
+    type Output = Self;
+
+    fn sub(self, other: D) -> Self {
+        OrderedDecimal(self.0 - other)
+    }
+}
+
+impl Sub<OrderedDecimal<Decimal64>> for Decimal64 {
+    type Output = Self;
+
+    fn sub(self, other: OrderedDecimal<Decimal64>) -> Self {
+        self - other.0
+    }
+}
+
+impl Sub<OrderedDecimal<Decimal128>> for Decimal128 {
+    type Output = Self;
+
+    fn sub(self, other: OrderedDecimal<Decimal128>) -> Self {
+        self - other.0
+    }
+}
+
+impl<D> SubAssign for OrderedDecimal<D>
+where
+    D: SubAssign,
+{
+    fn sub_assign(&mut self, other: Self) {
+        self.0 -= other.0;
+    }
+}
+
+/// Subs inner directly.
+impl<D> SubAssign<D> for OrderedDecimal<D>
+where
+    D: Sub<Output = D> + Copy,
+{
+    fn sub_assign(&mut self, other: D) {
+        *self = *self - other;
+    }
+}
+impl<D> Mul for OrderedDecimal<D>
+where
+    D: Mul<Output = D>,
+{
+    type Output = Self;
+
+    fn mul(self, other: OrderedDecimal<D>) -> Self {
+        OrderedDecimal(self.0 * other.0)
+    }
+}
+
+impl<D> Mul<D> for OrderedDecimal<D>
+where
+    D: Mul<Output = D>,
+{
+    type Output = Self;
+
+    fn mul(self, other: D) -> Self {
+        OrderedDecimal(self.0 * other)
+    }
+}
+
+impl Mul<OrderedDecimal<Decimal64>> for Decimal64 {
+    type Output = Self;
+
+    fn mul(self, other: OrderedDecimal<Decimal64>) -> Self {
+        self * other.0
+    }
+}
+
+impl Mul<OrderedDecimal<Decimal128>> for Decimal128 {
+    type Output = Self;
+
+    fn mul(self, other: OrderedDecimal<Decimal128>) -> Self {
+        self * other.0
+    }
+}
+
+impl<D> MulAssign for OrderedDecimal<D>
+where
+    D: MulAssign,
+{
+    fn mul_assign(&mut self, other: Self) {
+        self.0 *= other.0;
+    }
+}
+
+/// Muls inner directly.
+impl<D> MulAssign<D> for OrderedDecimal<D>
+where
+    D: Mul<Output = D> + Copy,
+{
+    fn mul_assign(&mut self, other: D) {
+        *self = *self * other;
+    }
+}
+
+impl<D> Div for OrderedDecimal<D>
+where
+    D: Div<Output = D>,
+{
+    type Output = Self;
+
+    fn div(self, other: OrderedDecimal<D>) -> Self {
+        OrderedDecimal(self.0 / other.0)
+    }
+}
+
+impl<D> Div<D> for OrderedDecimal<D>
+where
+    D: Div<Output = D>,
+{
+    type Output = Self;
+
+    fn div(self, other: D) -> Self {
+        OrderedDecimal(self.0 / other)
+    }
+}
+
+impl Div<OrderedDecimal<Decimal64>> for Decimal64 {
+    type Output = Self;
+
+    fn div(self, other: OrderedDecimal<Decimal64>) -> Self {
+        self / other.0
+    }
+}
+
+impl Div<OrderedDecimal<Decimal128>> for Decimal128 {
+    type Output = Self;
+
+    fn div(self, other: OrderedDecimal<Decimal128>) -> Self {
+        self / other.0
+    }
+}
+
+impl<D> DivAssign for OrderedDecimal<D>
+where
+    D: DivAssign,
+{
+    fn div_assign(&mut self, other: Self) {
+        self.0 /= other.0;
+    }
+}
+
+/// Divs inner directly.
+impl<D> DivAssign<D> for OrderedDecimal<D>
+where
+    D: Div<Output = D> + Copy,
+{
+    fn div_assign(&mut self, other: D) {
+        *self = *self / other;
+    }
+}
+
+impl<D> Rem for OrderedDecimal<D>
+where
+    D: Rem<Output = D>,
+{
+    type Output = Self;
+
+    fn rem(self, other: OrderedDecimal<D>) -> Self {
+        OrderedDecimal(self.0 % other.0)
+    }
+}
+
+impl<D> Rem<D> for OrderedDecimal<D>
+where
+    D: Rem<Output = D>,
+{
+    type Output = Self;
+
+    fn rem(self, other: D) -> Self {
+        OrderedDecimal(self.0 % other)
+    }
+}
+
+impl Rem<OrderedDecimal<Decimal64>> for Decimal64 {
+    type Output = Self;
+
+    fn rem(self, other: OrderedDecimal<Decimal64>) -> Self {
+        self % other.0
+    }
+}
+
+impl Rem<OrderedDecimal<Decimal128>> for Decimal128 {
+    type Output = Self;
+
+    fn rem(self, other: OrderedDecimal<Decimal128>) -> Self {
+        self % other.0
+    }
+}
+
+impl<D> RemAssign for OrderedDecimal<D>
+where
+    D: RemAssign,
+{
+    fn rem_assign(&mut self, other: Self) {
+        self.0 %= other.0;
+    }
+}
+
+/// Rems inner directly.
+impl<D> RemAssign<D> for OrderedDecimal<D>
+where
+    D: Rem<Output = D> + Copy,
+{
+    fn rem_assign(&mut self, other: D) {
+        *self = *self % other;
+    }
+}
+
+impl<D> Neg for OrderedDecimal<D>
+where
+    D: Neg<Output = D>,
+{
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        OrderedDecimal(-self.0)
+    }
+}
+
+impl<D> Sum for OrderedDecimal<D>
+where
+    D: Sum,
+{
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = OrderedDecimal<D>>,
+    {
+        OrderedDecimal(iter.map(|v| v.0).sum())
+    }
+}
+
+impl<'a, D> Sum<&'a OrderedDecimal<D>> for OrderedDecimal<D>
+where
+    D: Sum<&'a D> + 'a,
+{
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a OrderedDecimal<D>>,
+    {
+        OrderedDecimal(iter.map(|v| &v.0).sum())
+    }
+}
+
+impl<D> Product for OrderedDecimal<D>
+where
+    D: Product,
+{
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = OrderedDecimal<D>>,
+    {
+        OrderedDecimal(iter.map(|v| v.0).product())
+    }
+}
+
+impl<'a, D> Product<&'a OrderedDecimal<D>> for OrderedDecimal<D>
+where
+    D: Product<&'a D> + 'a,
+{
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a OrderedDecimal<D>>,
+    {
+        OrderedDecimal(iter.map(|v| &v.0).product())
     }
 }

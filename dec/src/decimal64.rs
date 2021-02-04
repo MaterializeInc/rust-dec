@@ -16,9 +16,12 @@
 use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::iter::{Product, Sum};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
 use std::str::FromStr;
 
 use libc::c_char;
@@ -67,6 +70,13 @@ impl Decimal64 {
         [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x38, 0x22]
     } else {
         [0x22, 0x38, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+    });
+
+    /// The value that represents one.
+    pub const ONE: Decimal64 = Decimal64::from_ne_bytes(if cfg!(target_endian = "little") {
+        [0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x38, 0x22]
+    } else {
+        [0x22, 0x38, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1]
     });
 
     /// Creates a number from its representation as a little-endian byte array.
@@ -342,6 +352,14 @@ impl PartialEq for Decimal64 {
     }
 }
 
+impl Neg for Decimal64 {
+    type Output = Decimal64;
+
+    fn neg(self) -> Decimal64 {
+        Context::<Decimal64>::default().minus(self)
+    }
+}
+
 impl Add<Decimal64> for Decimal64 {
     type Output = Decimal64;
 
@@ -409,6 +427,52 @@ impl Sub<Decimal64> for Decimal64 {
 impl SubAssign<Decimal64> for Decimal64 {
     fn sub_assign(&mut self, rhs: Decimal64) {
         *self = Context::<Decimal64>::default().sub(*self, rhs);
+    }
+}
+
+impl Sum for Decimal64 {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Decimal64>,
+    {
+        let mut cx = Context::<Decimal64>::default();
+        let mut sum = Decimal64::ZERO;
+        for d in iter {
+            sum = cx.add(sum, d);
+        }
+        sum
+    }
+}
+
+impl<'a> Sum<&'a Decimal64> for Decimal64 {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Decimal64>,
+    {
+        iter.copied().sum()
+    }
+}
+
+impl Product for Decimal64 {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Decimal64>,
+    {
+        let mut cx = Context::<Decimal64>::default();
+        let mut product = Decimal64::ONE;
+        for d in iter {
+            product = cx.mul(product, d);
+        }
+        product
+    }
+}
+
+impl<'a> Product<&'a Decimal64> for Decimal64 {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Decimal64>,
+    {
+        iter.copied().product()
     }
 }
 

@@ -16,9 +16,12 @@
 use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::iter::{Product, Sum};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
 use std::str::FromStr;
 
 use libc::c_char;
@@ -74,6 +77,17 @@ impl Decimal128 {
     } else {
         [
             0x22, 0x08, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        ]
+    });
+
+    /// The value that represents one.
+    pub const ONE: Decimal128 = Decimal128::from_ne_bytes(if cfg!(target_endian = "little") {
+        [
+            0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x08, 0x22,
+        ]
+    } else {
+        [
+            0x22, 0x08, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
         ]
     });
 
@@ -352,6 +366,14 @@ impl PartialEq for Decimal128 {
     }
 }
 
+impl Neg for Decimal128 {
+    type Output = Decimal128;
+
+    fn neg(self) -> Decimal128 {
+        Context::<Decimal128>::default().minus(self)
+    }
+}
+
 impl Add<Decimal128> for Decimal128 {
     type Output = Decimal128;
 
@@ -419,6 +441,52 @@ impl Sub<Decimal128> for Decimal128 {
 impl SubAssign<Decimal128> for Decimal128 {
     fn sub_assign(&mut self, rhs: Decimal128) {
         *self = Context::<Decimal128>::default().sub(*self, rhs);
+    }
+}
+
+impl Sum for Decimal128 {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Decimal128>,
+    {
+        let mut cx = Context::<Decimal128>::default();
+        let mut sum = Decimal128::ZERO;
+        for d in iter {
+            sum = cx.add(sum, d);
+        }
+        sum
+    }
+}
+
+impl<'a> Sum<&'a Decimal128> for Decimal128 {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Decimal128>,
+    {
+        iter.copied().sum()
+    }
+}
+
+impl Product for Decimal128 {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Decimal128>,
+    {
+        let mut cx = Context::<Decimal128>::default();
+        let mut product = Decimal128::ONE;
+        for d in iter {
+            product = cx.mul(product, d);
+        }
+        product
+    }
+}
+
+impl<'a> Product<&'a Decimal128> for Decimal128 {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Decimal128>,
+    {
+        iter.copied().product()
     }
 }
 
