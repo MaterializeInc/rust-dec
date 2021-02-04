@@ -1,8 +1,8 @@
 # Release checklist
 
-* Update changelogs.
+* Update changelog(s).
 
-* Update versions in `Cargo.toml`s.
+* Update versions in `Cargo.toml`(s).
 
 * Update versions in README.
 
@@ -10,12 +10,16 @@
 
 * Ensure tests have passed.
 
-* ```
-  git tag -am 'dec $VERSION' dec-$VERSION
+* If releasing dec:
+
+  ```
+  git tag -am "dec $VERSION" dec-$VERSION
   ```
 
-* ```
-  git tag -am 'decnumber-sys $VERSION' decnumber-sys-$VERSION
+* If releasing dec-sys:
+
+  ```
+  git tag -am "decnumber-sys $VERSION" decnumber-sys-$VERSION
   ```
 
 * ```
