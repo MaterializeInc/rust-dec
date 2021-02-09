@@ -97,6 +97,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod context;
+#[macro_use]
+mod conv;
 #[cfg(feature = "arbitrary-precision")]
 #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary-precision")))]
 mod decimal;
@@ -105,6 +107,8 @@ mod decimal32;
 mod decimal64;
 mod error;
 mod ordered;
+#[cfg(tests)]
+mod tests;
 
 pub use context::{Class, Context, Rounding, Status};
 #[cfg(feature = "arbitrary-precision")]

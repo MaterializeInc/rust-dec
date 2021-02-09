@@ -5,7 +5,19 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## 0.2.0 - 2020-02-03
+## Unreleased
+
+* Implement `From<i64>` and `From<u64>` for `Decimal128`.
+
+* Add the `from_i64` and `from_u64` methods to `Context<Decimal64>`, which
+  provide inexact conversions from `i64` and `u64`, respectively, to
+  `Decimal64`.
+
+* Add the `from_i128` and `from_u128` methods to `Context<Decimal128>`, which
+  provide inexact conversions from `i128` and `u128`, respectively, to
+  `Decimal128`.
+
+## 0.2.0 - 2021-02-03
 
 * Add the `OrderedDecimal` wrapper type which imbues `Decimal64` and
   `Decimal128` with implementations of `Ord` and `Hash`, akin to
@@ -44,17 +56,17 @@ Versioning].
 * Add `std::iter::Sum` and `std::iter::Product` implementations for `Decimal64`
   and `Decimal128`.
 
-## 0.1.2 - 2020-02-01
+## 0.1.2 - 2021-02-01
 
 * Correct documentation links in README, again.
 
-## 0.1.1 - 2020-02-01
+## 0.1.1 - 2021-02-01
 
 * Correct documentation links in README.
 * Implement `Hash` for the `Class`, `Rounding` and `Status` types.
 * Include fields in `fmt::Debug` output for `Status`.
 
-## 0.1.0 - 2020-01-31
+## 0.1.0 - 2021-01-31
 
 Initial release.
 

@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::iter::{Product, Sum};
@@ -77,6 +78,13 @@ impl Decimal64 {
         [0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x38, 0x22]
     } else {
         [0x22, 0x38, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1]
+    });
+
+    /// The value that represents 2<sup>32</sup>.
+    const TWO_POW_32: Decimal64 = Decimal64::from_ne_bytes(if cfg!(target_endian = "little") {
+        [0x7A, 0xB5, 0xAF, 0x15, 0x1, 0x0, 0x38, 0x22]
+    } else {
+        [0x22, 0x38, 0x0, 0x1, 0x15, 0xAF, 0xB5, 0x7A]
     });
 
     /// Creates a number from its representation as a little-endian byte array.
@@ -534,6 +542,62 @@ impl Context<Decimal64> {
             d64.assume_init()
         };
         Decimal64 { inner: d64 }
+    }
+
+    /// Constructs a number from an `i64`.
+    ///
+    /// Note that this function can return inexact results for numbers with 15
+    /// or more places of precision, e.g. `99_999_999_999_999_999i64`,
+    /// `-99_999_999_999_999_999i64`, `i64::MAX`, `i64::MIN`, etc.
+    ///
+    /// However, some numbers with 15 or more places of precision retain their
+    /// exactness, e.g. `1_000_000_000_000_000i64`.
+    ///
+    /// ```
+    /// use dec::Decimal64;
+    /// let mut ctx = dec::Context::<Decimal64>::default();
+    /// let d = ctx.from_i64(-99_999_999_999_999_999i64);
+    /// // Inexact result
+    /// assert!(ctx.status().inexact());
+    ///
+    /// let mut ctx = dec::Context::<Decimal64>::default();
+    /// let d = ctx.from_i64(1_000_000_000_000_000i64);
+    /// // Exact result
+    /// assert!(!ctx.status().inexact());
+    /// ```
+    ///
+    /// To avoid inexact results when converting from large `i64`, use
+    /// [`crate::Decimal128`] instead.
+    pub fn from_i64(&mut self, n: i64) -> Decimal64 {
+        from_signed_int!(Decimal64, self, n)
+    }
+
+    /// Constructs a number from an `u64`.
+    ///
+    /// Note that this function can return inexact results for numbers with 16
+    /// or more places of precision, e.g., `1_000_000_000_000_0001u64` and
+    /// `u64::MAX`.
+    ///
+    /// However, some numbers with 15 or more places of precision retain their
+    /// exactness, e.g. `1_000_000_000_000_000u64`.
+    ///
+    /// ```
+    /// use dec::Decimal64;
+    /// let mut ctx = dec::Context::<Decimal64>::default();
+    /// let d = ctx.from_i64(1_000_000_000_000_0001i64);
+    /// // Inexact result
+    /// assert!(ctx.status().inexact());
+    ///
+    /// let mut ctx = dec::Context::<Decimal64>::default();
+    /// let d = ctx.from_i64(1_000_000_000_000_000i64);
+    /// // Exact result
+    /// assert!(!ctx.status().inexact());
+    /// ```
+    ///
+    /// To avoid inexact results when converting from large `u64`, use
+    /// [`crate::Decimal128`] instead.
+    pub fn from_u64(&mut self, n: u64) -> Decimal64 {
+        from_unsigned_int!(Decimal64, self, n)
     }
 
     /// Computes the absolute value of `n`.
