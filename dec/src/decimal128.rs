@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::iter::{Product, Sum};
@@ -88,6 +89,17 @@ impl Decimal128 {
     } else {
         [
             0x22, 0x08, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+        ]
+    });
+
+    /// The value that represents 2<sup>32</sup>.
+    const TWO_POW_32: Decimal128 = Decimal128::from_ne_bytes(if cfg!(target_endian = "little") {
+        [
+            0x7A, 0xB5, 0xAF, 0x15, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x08, 0x22,
+        ]
+    } else {
+        [
+            0x22, 0x08, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x15, 0xAF, 0xB5, 0x7A,
         ]
     });
 
@@ -337,6 +349,28 @@ impl From<u32> for Decimal128 {
     }
 }
 
+// NOTE(benesch): Looking at the implementation of decFloatFromInt32, I suspect
+// there is something much more clever we could do to convert from i64/u64 that
+// uses the BIN2DPD tables directly.
+
+impl From<i64> for Decimal128 {
+    fn from(n: i64) -> Decimal128 {
+        let mut cx = Context::<Decimal128>::default();
+        let d = from_signed_int!(Decimal128, cx, n);
+        debug_assert!(!cx.status().any());
+        d
+    }
+}
+
+impl From<u64> for Decimal128 {
+    fn from(n: u64) -> Decimal128 {
+        let mut cx = Context::<Decimal128>::default();
+        let d = from_unsigned_int!(Decimal128, cx, n);
+        debug_assert!(!cx.status().any());
+        d
+    }
+}
+
 impl From<Decimal32> for Decimal128 {
     fn from(d32: Decimal32) -> Decimal128 {
         Decimal128::from(Decimal64::from(d32))
@@ -535,6 +569,61 @@ impl Context<Decimal128> {
             d128.assume_init()
         };
         Decimal128 { inner: d128 }
+    }
+
+    /// Constructs a number from an `i128`.
+    ///
+    /// Note that this function can return inexact results for numbers with 35
+    /// or more places of precision, e.g.
+    /// `99_999_999_999_999_999_999_999_999_999_999_999i128`,
+    /// `-99_999_999_999_999_999_999_999_999_999_999_999i128`, `i128::MAX`,
+    /// `i128::MIN`, etc.
+    ///
+    /// However, some numbers with 35 or more places of precision retain their
+    /// exactness, e.g. `10_000_000_000_000_000_000_000_000_000_000_000i128`.
+    ///
+    /// ```
+    /// use dec::Decimal128;
+    /// let mut ctx = dec::Context::<Decimal128>::default();
+    /// let d = ctx.from_i128(-99_999_999_999_999_999_999_999_999_999_999_999i128);
+    /// // Inexact result
+    /// assert!(ctx.status().inexact());
+    ///
+    /// let mut ctx = dec::Context::<Decimal128>::default();
+    /// let d = ctx.from_i128(10_000_000_000_000_000_000_000_000_000_000_000i128);
+    /// // Exact result
+    /// assert!(!ctx.status().inexact());
+    /// ```
+    ///
+    /// To avoid inexact results when converting from large `i64`, use
+    /// [`crate::Decimal128`] instead.
+    pub fn from_i128(&mut self, n: i128) -> Decimal128 {
+        from_signed_int!(Decimal128, self, n)
+    }
+
+    /// Constructs a number from an `u128`.
+    ///
+    /// Note that this function can return inexact results for numbers with 35
+    /// or more places of precision, e.g.,
+    /// `10_000_000_000_000_000_000_000_000_000_000_001u128` and `u128::MAX`.
+    ///
+    /// However, some numbers with 15 or more places of precision retain their
+    /// exactness, e.g. `10_000_000_000_000_000_000_000_000_000_000_000u128`.
+    ///
+    /// ```
+    /// use dec::Decimal128;
+    /// let mut ctx = dec::Context::<Decimal128>::default();
+    /// let d = ctx.from_i128(10_000_000_000_000_000_000_000_000_000_000_001i128);
+    /// // Inexact result
+    /// assert!(ctx.status().inexact());
+    ///
+    /// let mut ctx = dec::Context::<Decimal128>::default();
+    /// let d = ctx.from_i128(10_000_000_000_000_000_000_000_000_000_000_000i128);
+    /// // Exact result
+    /// assert!(!ctx.status().inexact());
+    /// ```
+    pub fn from_u128(&mut self, n: u128) -> Decimal128 {
+        from_unsigned_int!(Decimal128, self, n)
     }
 
     /// Computes the absolute value of `n`.
