@@ -22,11 +22,13 @@
   git tag -am "decnumber-sys $VERSION" decnumber-sys-$VERSION
   ```
 
-* ```
+* Push tags:
+
+  ```
   git push --tags
   ```
 
-* Create a new release on GitHub.
+* Create a new release on GitHub:
 
 * ```
   (cd dec && cargo publish)
