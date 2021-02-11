@@ -5,7 +5,7 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## Unreleased
+## 0.3.0 - 2021-02-11
 
 * Implement `From<i64>` and `From<u64>` for `Decimal128`.
 
