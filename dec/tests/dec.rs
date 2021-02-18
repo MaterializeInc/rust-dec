@@ -207,181 +207,187 @@ fn test_overloading() -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn test_i64_to_decimal128() -> Result<(), Box<dyn Error>> {
-    for &t in &[
-        0,
-        1i64,
-        -1i64,
-        i64::MAX,
-        i64::MIN,
-        i64::MAX / 2,
-        i64::MIN / 2,
-    ] {
-        assert_eq!(Decimal128::from(t).to_string(), t.to_string());
+    fn inner(i: i64) {
+        assert_eq!(Decimal128::from(i).to_string(), i.to_string());
     }
+
+    inner(0);
+    inner(1i64);
+    inner(-1i64);
+    inner(i64::MAX);
+    inner(i64::MIN);
+    inner(i64::MAX / 2);
+    inner(i64::MIN / 2);
+
     Ok(())
 }
 
 #[test]
 fn test_u64_to_decimal128() -> Result<(), Box<dyn Error>> {
-    for &t in &[0, 1u64, u64::MAX, u64::MIN, u64::MAX / 2, u64::MIN / 2] {
-        assert_eq!(Decimal128::from(t).to_string(), t.to_string());
+    fn inner(i: u64) {
+        assert_eq!(Decimal128::from(i).to_string(), i.to_string());
     }
+
+    inner(0);
+    inner(1u64);
+    inner(u64::MAX);
+    inner(u64::MIN);
+    inner(u64::MAX / 2);
+    inner(u64::MIN / 2);
+
     Ok(())
 }
 
 #[test]
 fn test_i128_to_decimal128() -> Result<(), Box<dyn Error>> {
-    for &(input, output, inexact) in &[
-        (1i128, "1", false),
-        (-1i128, "-1", false),
-        (i128::from(i64::MAX), "9223372036854775807", false),
-        (i128::from(i64::MIN), "-9223372036854775808", false),
-        (i128::MAX, "1.701411834604692317316873037158841E+38", true),
-        (i128::MIN, "-1.701411834604692317316873037158841E+38", true),
-        // +34 places is exact.
-        (
-            i128::MAX / 100000,
-            "1701411834604692317316873037158841",
-            false,
-        ),
-        (
-            9_999_999_999_999_999_999_999_999_999_999_999i128,
-            "9999999999999999999999999999999999",
-            false,
-        ),
-        // +35 places places can be inexact.
-        (
-            i128::MAX / 10000,
-            "1.701411834604692317316873037158841E+34",
-            true,
-        ),
-        // +35 places can be exact.
-        (
-            10_000_000_000_000_000_000_000_000_000_000_000i128,
-            "1.000000000000000000000000000000000E+34",
-            false,
-        ),
-        // -34 places is exact.
-        (
-            i128::MIN / 100000,
-            "-1701411834604692317316873037158841",
-            false,
-        ),
-        (
-            -9_999_999_999_999_999_999_999_999_999_999_999i128,
-            "-9999999999999999999999999999999999",
-            false,
-        ),
-        // -35 places can be inexact.
-        (
-            i128::MIN / 10000,
-            "-1.701411834604692317316873037158841E+34",
-            true,
-        ),
-        // -35 places can be exact.
-        (
-            -10_000_000_000_000_000_000_000_000_000_000_000i128,
-            "-1.000000000000000000000000000000000E+34",
-            false,
-        ),
-    ] {
+    fn inner(input: i128, output: &str, inexact: bool) {
         let mut cx = Context::<Decimal128>::default();
         let d = cx.from_i128(input).to_string();
         assert_eq!(d.to_string(), output);
         assert_eq!(cx.status().inexact(), inexact);
     }
+
+    inner(1i128, "1", false);
+    inner(-1i128, "-1", false);
+    inner(i128::from(i64::MAX), "9223372036854775807", false);
+    inner(i128::from(i64::MIN), "-9223372036854775808", false);
+    inner(i128::MAX, "1.701411834604692317316873037158841E+38", true);
+    inner(i128::MIN, "-1.701411834604692317316873037158841E+38", true);
+    // +34 places is exact.
+    inner(
+        i128::MAX / 100000,
+        "1701411834604692317316873037158841",
+        false,
+    );
+    inner(
+        9_999_999_999_999_999_999_999_999_999_999_999i128,
+        "9999999999999999999999999999999999",
+        false,
+    );
+    // +35 places places can be inexact.
+    inner(
+        i128::MAX / 10000,
+        "1.701411834604692317316873037158841E+34",
+        true,
+    );
+    // +35 places can be exact.
+    inner(
+        10_000_000_000_000_000_000_000_000_000_000_000i128,
+        "1.000000000000000000000000000000000E+34",
+        false,
+    );
+    // -34 places is exact.
+    inner(
+        i128::MIN / 100000,
+        "-1701411834604692317316873037158841",
+        false,
+    );
+    inner(
+        -9_999_999_999_999_999_999_999_999_999_999_999i128,
+        "-9999999999999999999999999999999999",
+        false,
+    );
+    // -35 places can be inexact.
+    inner(
+        i128::MIN / 10000,
+        "-1.701411834604692317316873037158841E+34",
+        true,
+    );
+    // -35 places can be exact.
+    inner(
+        -10_000_000_000_000_000_000_000_000_000_000_000i128,
+        "-1.000000000000000000000000000000000E+34",
+        false,
+    );
     Ok(())
 }
 
 #[test]
 fn test_u128_to_decimal128() -> Result<(), Box<dyn Error>> {
-    for &(input, output, exact) in &[
-        (1u128, "1", false),
-        (u128::MAX, "3.402823669209384634633746074317682E+38", true),
-        (u128::MIN, "0", false),
-        // 34 places is exact.
-        (
-            u128::MAX / 100000,
-            "3402823669209384634633746074317682",
-            false,
-        ),
-        (
-            9_999_999_999_999_999_999_999_999_999_999_999u128,
-            "9999999999999999999999999999999999",
-            false,
-        ),
-        // 35 places can be exact.
-        (
-            10_000_000_000_000_000_000_000_000_000_000_000u128,
-            "1.000000000000000000000000000000000E+34",
-            false,
-        ),
-        // 35 places can be inexact.
-        (
-            10_000_000_000_000_000_000_000_000_000_000_001u128,
-            "1.000000000000000000000000000000000E+34",
-            true,
-        ),
-    ] {
+    fn inner(input: u128, output: &str, inexact: bool) {
         let mut cx = Context::<Decimal128>::default();
         let d = cx.from_u128(input).to_string();
         assert_eq!(d.to_string(), output);
-        assert_eq!(cx.status().inexact(), exact);
+        assert_eq!(cx.status().inexact(), inexact);
     }
+    inner(1u128, "1", false);
+    inner(u128::MAX, "3.402823669209384634633746074317682E+38", true);
+    inner(u128::MIN, "0", false);
+    // 34 places is exact.
+    inner(
+        u128::MAX / 100000,
+        "3402823669209384634633746074317682",
+        false,
+    );
+    inner(
+        9_999_999_999_999_999_999_999_999_999_999_999u128,
+        "9999999999999999999999999999999999",
+        false,
+    );
+    // 35 places can be exact.
+    inner(
+        10_000_000_000_000_000_000_000_000_000_000_000u128,
+        "1.000000000000000000000000000000000E+34",
+        false,
+    );
+    // 35 places can be inexact.
+    inner(
+        10_000_000_000_000_000_000_000_000_000_000_001u128,
+        "1.000000000000000000000000000000000E+34",
+        true,
+    );
     Ok(())
 }
 
 #[test]
 fn test_i64_to_decimal64() -> Result<(), Box<dyn Error>> {
-    for &(input, output, inexact) in &[
-        (1i64, "1", false),
-        (-1i64, "-1", false),
-        (i64::MAX, "9.223372036854776E+18", true),
-        (i64::MIN, "-9.223372036854776E+18", true),
-        (i64::MAX / 2, "4.611686018427388E+18", true),
-        (i64::MIN / 2, "-4.611686018427388E+18", true),
-        // +16 places is exact.
-        (i64::MAX / 1000, "9223372036854775", false),
-        (9_999_999_999_999_999i64, "9999999999999999", false),
-        // +17 places can be exact.
-        (1_000_0000_000_000_000i64, "1.000000000000000E+16", false),
-        // +17 places can be inexact.
-        (i64::MAX / 100, "9.223372036854776E+16", true),
-        // -15 places is exact.
-        (i64::MIN / 10000, "-922337203685477", false),
-        (-999_999_999_999_999i64, "-999999999999999", false),
-        // -16 places can be exact.
-        (i64::MIN / 1000, "-9223372036854775", false),
-        // -16 places can be inexact.
-        (-9_999_999_999_999_999i64, "-9999999999999997", true),
-    ] {
+    fn inner(input: i64, output: &str, inexact: bool) {
         let mut cx = Context::<Decimal64>::default();
         let d = cx.from_i64(input).to_string();
         assert_eq!(d.to_string(), output);
         assert_eq!(cx.status().inexact(), inexact);
     }
+    inner(1i64, "1", false);
+    inner(-1i64, "-1", false);
+    inner(i64::MAX, "9.223372036854776E+18", true);
+    inner(i64::MIN, "-9.223372036854776E+18", true);
+    inner(i64::MAX / 2, "4.611686018427388E+18", true);
+    inner(i64::MIN / 2, "-4.611686018427388E+18", true);
+    // +16 places is exact.
+    inner(i64::MAX / 1000, "9223372036854775", false);
+    inner(9_999_999_999_999_999i64, "9999999999999999", false);
+    // +17 places can be exact.
+    inner(1_000_0000_000_000_000i64, "1.000000000000000E+16", false);
+    // +17 places can be inexact.
+    inner(i64::MAX / 100, "9.223372036854776E+16", true);
+    // -15 places is exact.
+    inner(i64::MIN / 10000, "-922337203685477", false);
+    inner(-999_999_999_999_999i64, "-999999999999999", false);
+    // -16 places can be exact.
+    inner(i64::MIN / 1000, "-9223372036854775", false);
+    // -16 places can be inexact.
+    inner(-9_999_999_999_999_999i64, "-9999999999999997", true);
     Ok(())
 }
 
 #[test]
 fn test_u64_to_decimal64() -> Result<(), Box<dyn Error>> {
-    for &(input, output, inexact) in &[
-        (1u64, "1", false),
-        (u64::MAX, "1.844674407370955E+19", true),
-        (u64::MIN, "0", false),
-        // 16 digits is exact.
-        (u64::MAX / 10000, "1844674407370955", false),
-        (9_999_999_999_999_999u64, "9999999999999999", false),
-        // 17 digits can be exact.
-        (10_000_000_000_000_000u64, "1.000000000000000E+16", false),
-        // 17 digits can be inexact.
-        (u64::MAX / 1000, "1.844674407370955E+16", true),
-    ] {
+    fn inner(input: u64, output: &str, inexact: bool) {
         let mut cx = Context::<Decimal64>::default();
         let d = cx.from_u64(input).to_string();
         assert_eq!(d.to_string(), output);
         assert_eq!(cx.status().inexact(), inexact);
     }
+    inner(1u64, "1", false);
+    inner(u64::MAX, "1.844674407370955E+19", true);
+    inner(u64::MIN, "0", false);
+    // 16 digits is exact.
+    inner(u64::MAX / 10000, "1844674407370955", false);
+    inner(9_999_999_999_999_999u64, "9999999999999999", false);
+    // 17 digits can be exact.
+    inner(10_000_000_000_000_000u64, "1.000000000000000E+16", false);
+    // 17 digits can be inexact.
+    inner(u64::MAX / 1000, "1.844674407370955E+16", true);
 
     Ok(())
 }
