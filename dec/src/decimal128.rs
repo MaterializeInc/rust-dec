@@ -166,6 +166,25 @@ impl Decimal128 {
         unsafe { decnumber_sys::decQuadDigits(&self.inner) }
     }
 
+    /// Computes the coefficient of the number.
+    ///
+    /// If the number is a special value (i.e., NaN or infinity), returns zero.
+    pub fn coefficient(&self) -> i128 {
+        let mut buf = MaybeUninit::<[u8; decnumber_sys::DECQUAD_Pmax]>::uninit();
+        let sign = unsafe {
+            decnumber_sys::decQuadGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8)
+        };
+        let buf = unsafe { buf.assume_init() };
+        let mut coeff = 0;
+        for n in buf.iter().skip_while(|x| **x == 0) {
+            coeff = coeff * 10 + i128::from(*n);
+        }
+        if sign < 0 {
+            coeff *= -1;
+        }
+        coeff
+    }
+
     /// Computes the exponent of the number.
     pub fn exponent(&self) -> i32 {
         unsafe { decnumber_sys::decQuadGetExponent(&self.inner) }
@@ -763,7 +782,7 @@ impl Context<Decimal128> {
         n
     }
 
-    /// Divides `lhs` by `rhs`.
+    /// Multiplies `lhs` by `rhs`.
     pub fn mul(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
         unsafe {
             decnumber_sys::decQuadMultiply(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
