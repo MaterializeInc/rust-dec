@@ -150,6 +150,25 @@ impl Decimal64 {
         unsafe { decnumber_sys::decDoubleDigits(&self.inner) }
     }
 
+    /// Computes the coefficient of the number.
+    ///
+    /// If the number is a special value (i.e., NaN or infinity), returns zero.
+    pub fn coefficient(&self) -> i64 {
+        let mut buf = MaybeUninit::<[u8; decnumber_sys::DECDOUBLE_Pmax]>::uninit();
+        let sign = unsafe {
+            decnumber_sys::decDoubleGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8)
+        };
+        let buf = unsafe { buf.assume_init() };
+        let mut coeff = 0;
+        for n in buf.iter().skip_while(|x| **x == 0) {
+            coeff = coeff * 10 + i64::from(*n);
+        }
+        if sign < 0 {
+            coeff *= -1;
+        }
+        coeff
+    }
+
     /// Computes the exponent of the number.
     pub fn exponent(&self) -> i32 {
         unsafe { decnumber_sys::decDoubleGetExponent(&self.inner) }
@@ -743,7 +762,7 @@ impl Context<Decimal64> {
         n
     }
 
-    /// Divides `lhs` by `rhs`.
+    /// Multiplies `lhs` by `rhs`.
     pub fn mul(&mut self, mut lhs: Decimal64, rhs: Decimal64) -> Decimal64 {
         unsafe {
             decnumber_sys::decDoubleMultiply(

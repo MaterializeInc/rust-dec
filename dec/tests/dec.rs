@@ -385,3 +385,176 @@ fn test_u64_to_decimal64() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+#[test]
+fn test_decimal32_decomposition() -> Result<(), Box<dyn Error>> {
+    fn inner(input: &str, coefficient: i32, exponent: i32) {
+        let d: Decimal32 = input.parse().unwrap();
+        assert_eq!(d.coefficient(), coefficient);
+        assert_eq!(d.exponent(), exponent);
+    }
+    inner("0", 0, 0);
+    inner("1", 1, 0);
+    inner("-1", -1, 0);
+    inner("4294967295", 4294967, 3);
+    inner("-4294967295", -4294967, 3);
+    inner("4294967", 4294967, 0);
+    inner("-4294967", -4294967, 0);
+    inner("42949.67295", 4294967, -2);
+    inner("-42949.67295", -4294967, -2);
+    inner(".4294967295", 4294967, -7);
+    inner("-.4294967295", -4294967, -7);
+
+    Ok(())
+}
+
+#[test]
+fn test_decimal64_decomposition() -> Result<(), Box<dyn Error>> {
+    fn inner(input: &str, coefficient: i64, exponent: i32) {
+        let d: Decimal64 = input.parse().unwrap();
+        assert_eq!(d.coefficient(), coefficient);
+        assert_eq!(d.exponent(), exponent);
+    }
+    inner("0", 0, 0);
+    inner("1", 1, 0);
+    inner("-1", -1, 0);
+    inner("18446744073709551615", 1844674407370955, 4);
+    inner("-18446744073709551615", -1844674407370955, 4);
+    inner("1844674407370955", 1844674407370955, 0);
+    inner("-1844674407370955", -1844674407370955, 0);
+    inner("18446744.07370955", 1844674407370955, -8);
+    inner("-18446744.07370955", -1844674407370955, -8);
+    inner(".1844674407370955", 1844674407370955, -16);
+    inner("-.1844674407370955", -1844674407370955, -16);
+
+    // Test some very large number.
+    let mut cx = Context::<Decimal64>::default();
+    let mut d = cx.from_u64(u64::MAX);
+    for _ in 0..4 {
+        d = cx.mul(d, d);
+    }
+
+    assert_eq!(d.coefficient(), 1797693134862317);
+    assert_eq!(d.exponent(), 293);
+
+    Ok(())
+}
+
+#[test]
+fn test_decimal64_special_value_coefficient() -> Result<(), Box<dyn Error>> {
+    let mut cx = Context::<Decimal64>::default();
+    let mut d = cx.from_u64(u64::MAX);
+
+    // Increase d until it is an infinite value
+    while d.is_finite() {
+        d = cx.mul(d, d);
+    }
+
+    // +Infinity
+    assert!(d.is_positive());
+    assert!(d.is_infinite());
+    assert_eq!(d.coefficient(), 0);
+
+    // -Infinity
+    d = -d;
+    assert!(!d.is_positive());
+    assert!(d.is_infinite());
+    assert_eq!(d.coefficient(), 0);
+
+    // NaN
+    assert_eq!(Decimal64::NAN.coefficient(), 0);
+
+    Ok(())
+}
+
+#[test]
+fn test_decimal128_decomposition() -> Result<(), Box<dyn Error>> {
+    fn inner(input: &str, coefficient: i128, exponent: i32) {
+        let d: Decimal128 = input.parse().unwrap();
+        assert_eq!(d.coefficient(), coefficient);
+        assert_eq!(d.exponent(), exponent);
+    }
+
+    inner("0", 0, 0);
+    inner("1", 1, 0);
+    inner("-1", -1, 0);
+    inner(
+        "340282366920938463463374607431768211455",
+        3402823669209384634633746074317682,
+        5,
+    );
+    inner(
+        "-340282366920938463463374607431768211455",
+        -3402823669209384634633746074317682,
+        5,
+    );
+    inner(
+        "3402823669209384634633746074317682",
+        3402823669209384634633746074317682,
+        0,
+    );
+    inner(
+        "-3402823669209384634633746074317682",
+        -3402823669209384634633746074317682,
+        0,
+    );
+    inner(
+        "3402823669209384.634633746074317682",
+        3402823669209384634633746074317682,
+        -18,
+    );
+    inner(
+        "-3402823669209384.634633746074317682",
+        -3402823669209384634633746074317682,
+        -18,
+    );
+    inner(
+        ".3402823669209384634633746074317682",
+        3402823669209384634633746074317682,
+        -34,
+    );
+    inner(
+        "-.3402823669209384634633746074317682",
+        -3402823669209384634633746074317682,
+        -34,
+    );
+
+    // Test some very large number.
+    let mut cx = Context::<Decimal128>::default();
+    let mut d = cx.from_u128(u128::MAX);
+    for _ in 0..7 {
+        d = cx.mul(d, d);
+    }
+
+    assert_eq!(d.coefficient(), 1189731495357231765085759326627988);
+    assert_eq!(d.exponent(), 4899);
+
+    Ok(())
+}
+
+#[test]
+fn test_decimal128_special_value_coefficient() -> Result<(), Box<dyn Error>> {
+    let mut cx = Context::<Decimal128>::default();
+    let mut d = cx.from_u128(u128::MAX);
+
+    // Increase d until it is an infinite value
+    while d.is_finite() {
+        d = cx.mul(d, d);
+    }
+
+    // +Infinity
+    assert!(d.is_positive());
+    assert!(d.is_infinite());
+    assert_eq!(d.coefficient(), 0);
+
+    // -Infinity
+    d = -d;
+    assert!(!d.is_positive());
+    assert!(d.is_infinite());
+    assert_eq!(d.coefficient(), 0);
+
+    // NaN
+    assert_eq!(Decimal128::NAN.coefficient(), 0);
+
+    Ok(())
+}

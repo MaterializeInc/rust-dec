@@ -5,6 +5,12 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## Unreleased
+
+* Add the `coefficient` method to `Decimal32`, `Decimal64`, and `Decimal128`,
+  which return the unscaled coefficient of the decimal as an `i32`, `i64`, or
+  `i128`, respectively.
+
 ## 0.3.0 - 2021-02-11
 
 * Implement `From<i64>` and `From<u64>` for `Decimal128`.
