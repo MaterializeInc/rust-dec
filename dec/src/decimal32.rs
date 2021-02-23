@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
@@ -109,19 +110,41 @@ impl Decimal32 {
     ///
     /// If the number is a special value (i.e., NaN or infinity), returns zero.
     pub fn coefficient(&self) -> i32 {
-        let mut buf = MaybeUninit::<[u8; decnumber_sys::DECSINGLE_Pmax]>::uninit();
-        let sign = unsafe {
-            decnumber_sys::decSingleGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8)
+        let mut dpd = if cfg!(target_endian = "big") {
+            u32::from_be_bytes(self.inner.bytes)
+        } else {
+            u32::from_le_bytes(self.inner.bytes)
         };
-        let buf = unsafe { buf.assume_init() };
-        let mut coeff = 0;
-        for n in buf.iter().skip_while(|x| **x == 0) {
-            coeff = coeff * 10 + i32::from(*n);
+
+        if dpd == 0 {
+            return 0;
         }
-        if sign < 0 {
-            coeff *= -1;
+
+        // Check if first bit is 1, indicating val is negative; this is equal to
+        // 2^31
+        let is_neg = dpd >= 2_147_483_648;
+
+        // Densely packed decimals are 10-bit strings.
+        let dpd_mask = 0b11_1111_1111;
+
+        // Digits 2-7
+        let mut r =
+            i32::try_from(unsafe { decnumber_sys::DPD2BIN[dpd as usize & dpd_mask] }).unwrap();
+        dpd >>= 10;
+        r += i32::try_from(unsafe { decnumber_sys::DPD2BINK[dpd as usize & dpd_mask] }).unwrap();
+
+        // Digit 1
+        let h = i32::try_from(unsafe { decnumber_sys::DECCOMBMSD[(dpd >> 16) as usize] }).unwrap();
+
+        if h > 0 {
+            r += h * 1_000_000;
         }
-        coeff
+
+        if is_neg {
+            r *= -1;
+        }
+
+        r
     }
 
     /// Computes the exponent of the number.

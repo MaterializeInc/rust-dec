@@ -564,3 +564,33 @@ fn test_decimal128_special_value_coefficient() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+#[test]
+/// Light integration test of `Decimal128` operations.
+fn test_decimal128_ops() -> Result<(), Box<dyn Error>> {
+    let mut cx = Context::<Decimal128>::default();
+    let d = cx.from_u128(u128::MAX);
+
+    let mut e = cx.from_i128(d.coefficient());
+    e = cx.scaleb(e, Decimal128::from(5));
+    e = cx.sub(d, e);
+
+    assert_eq!(cx.reduce(e), Decimal128::from(0));
+
+    Ok(())
+}
+
+#[test]
+/// Light integration test of `Decimal64` operations.
+fn test_decimal64_ops() -> Result<(), Box<dyn Error>> {
+    let mut cx = Context::<Decimal64>::default();
+    let d = cx.from_u64(u64::MAX);
+
+    let mut e = cx.from_i64(d.coefficient());
+    e = cx.scaleb(e, Decimal64::from(4));
+    e = cx.sub(d, e);
+
+    assert_eq!(cx.reduce(e), Decimal64::from(0));
+
+    Ok(())
+}

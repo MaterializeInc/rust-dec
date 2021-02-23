@@ -21,6 +21,10 @@ fn main() {
 
     ctest::TestGenerator::new()
         .include(root.join("include"))
+        .define("DEC_DPD2BIN", Some("1"))
+        .define("DEC_DPD2BINK", Some("1"))
+        .define("DEC_DPD2BINM", Some("1"))
+        .define("QUAD", Some("1"))
         .header("decimal128.h")
         .header("decimal64.h")
         .header("decimal32.h")
@@ -30,6 +34,7 @@ fn main() {
         .header("decDouble.h")
         .header("decQuad.h")
         .header("decPacked.h")
+        .header("decNumberLocal.h")
         .type_name(|ty, _is_struct, _is_union| match ty {
             "rounding" => "enum rounding".into(),
             "decClass" => "enum decClass".into(),

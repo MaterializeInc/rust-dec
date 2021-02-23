@@ -154,19 +154,45 @@ impl Decimal64 {
     ///
     /// If the number is a special value (i.e., NaN or infinity), returns zero.
     pub fn coefficient(&self) -> i64 {
-        let mut buf = MaybeUninit::<[u8; decnumber_sys::DECDOUBLE_Pmax]>::uninit();
-        let sign = unsafe {
-            decnumber_sys::decDoubleGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8)
+        let mut dpd = if cfg!(target_endian = "big") {
+            u64::from_be_bytes(self.inner.bytes)
+        } else {
+            u64::from_le_bytes(self.inner.bytes)
         };
-        let buf = unsafe { buf.assume_init() };
-        let mut coeff = 0;
-        for n in buf.iter().skip_while(|x| **x == 0) {
-            coeff = coeff * 10 + i64::from(*n);
+
+        // Densely packed decimals are 10-bit strings.
+        let dpd_mask = 0b11_1111_1111;
+
+        // Digits 8-16
+        // Lossy conversion from u64 to usize is fine because we only care
+        // about the 10 rightmost bits.
+        let mut r = i64::from(unsafe { decnumber_sys::DPD2BIN[dpd as usize & dpd_mask] });
+        dpd >>= 10;
+        r += i64::from(unsafe { decnumber_sys::DPD2BINK[dpd as usize & dpd_mask] });
+        dpd >>= 10;
+        r += i64::from(unsafe { decnumber_sys::DPD2BINM[dpd as usize & dpd_mask] });
+        dpd >>= 10;
+
+        // Digits 2-7
+        let mut r_1: i64 = 0;
+        r_1 += i64::from(unsafe { decnumber_sys::DPD2BIN[dpd as usize & dpd_mask] });
+        dpd >>= 10;
+        r_1 += i64::from(unsafe { decnumber_sys::DPD2BINK[dpd as usize & dpd_mask] });
+
+        r += r_1 * 10_000_000_00;
+
+        // Digit 1
+        let h = i64::from(unsafe { decnumber_sys::DECCOMBMSD[(dpd >> 18) as usize] });
+
+        if h > 0 {
+            r += h * 1_000_000_000_000_000;
         }
-        if sign < 0 {
-            coeff *= -1;
+
+        if self.is_negative() {
+            r *= -1;
         }
-        coeff
+
+        r
     }
 
     /// Computes the exponent of the number.

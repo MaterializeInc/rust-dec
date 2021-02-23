@@ -170,19 +170,53 @@ impl Decimal128 {
     ///
     /// If the number is a special value (i.e., NaN or infinity), returns zero.
     pub fn coefficient(&self) -> i128 {
-        let mut buf = MaybeUninit::<[u8; decnumber_sys::DECQUAD_Pmax]>::uninit();
-        let sign = unsafe {
-            decnumber_sys::decQuadGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8)
+        let mut dpd = if cfg!(target_endian = "big") {
+            u128::from_be_bytes(self.inner.bytes)
+        } else {
+            u128::from_le_bytes(self.inner.bytes)
         };
-        let buf = unsafe { buf.assume_init() };
-        let mut coeff = 0;
-        for n in buf.iter().skip_while(|x| **x == 0) {
-            coeff = coeff * 10 + i128::from(*n);
+
+        // Densely packed decimals are 10-bit strings.
+        let dpd_mask = 0b11_1111_1111;
+
+        let mut dpd2bin = |include_mill: bool| -> i128 {
+            let mut r: i128 = 0;
+
+            // Lossy conversion from u128 to usize is fine because we only care
+            // about the 10 rightmost bits.
+            r += i128::from(unsafe { decnumber_sys::DPD2BIN[dpd as usize & dpd_mask] });
+            dpd >>= 10;
+            r += i128::from(unsafe { decnumber_sys::DPD2BINK[dpd as usize & dpd_mask] });
+            dpd >>= 10;
+            if include_mill {
+                r += i128::from(unsafe { decnumber_sys::DPD2BINM[dpd as usize & dpd_mask] });
+                dpd >>= 10;
+            }
+
+            r
+        };
+
+        // Digits 26-34
+        let mut r = dpd2bin(true);
+        // Digits 17-25
+        r += dpd2bin(true) * 1_000_000_000;
+        // Digits 8-16
+        r += dpd2bin(true) * 1_000_000_000_000_000_000;
+        // Digits 2-7
+        r += dpd2bin(false) * 1_000_000_000_000_000_000_000_000_000;
+
+        // Digit 1
+        let h = i128::from(unsafe { decnumber_sys::DECCOMBMSD[(dpd >> 12) as usize] });
+
+        if h > 0 {
+            r += h * 1_000_000_000_000_000_000_000_000_000_000_000;
         }
-        if sign < 0 {
-            coeff *= -1;
+
+        if self.is_negative() {
+            r *= -1;
         }
-        coeff
+
+        r
     }
 
     /// Computes the exponent of the number.
