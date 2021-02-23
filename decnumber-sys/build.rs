@@ -47,6 +47,8 @@ fn main() {
         "decDouble.h",
         "decQuad.h",
         "decPacked.h",
+        "decDPD.h",
+        "decNumberLocal.h",
     ] {
         let src = Path::new("decnumber").join(header);
         let dst = out_dir.join("include").join(header);

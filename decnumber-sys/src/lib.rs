@@ -1091,3 +1091,11 @@ extern "C" {
     pub fn decimal128IsCanonical(arg1: *const decimal128) -> u32;
     pub fn decimal128Canonical(arg1: *mut decimal128, arg2: *const decimal128) -> *mut decimal128;
 }
+
+/// Constants used for efficiently decoding decimal coefficients.
+extern "C" {
+    pub static DPD2BIN: [u16; 1024];
+    pub static DPD2BINK: [u32; 1024];
+    pub static DPD2BINM: [u32; 1024];
+    pub static DECCOMBMSD: [u32; 64];
+}
