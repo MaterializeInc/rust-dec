@@ -10,10 +10,10 @@ libdecnumber.
 ```
 # Cargo.toml
 [dependencies]
-dec = "0.3.0"
+dec = "0.3.1"
 ```
 
-**[View documentation.](https://docs.rs/dec/0.3.0/)**
+**[View documentation.](https://docs.rs/dec/0.3.1/)**
 
 ## decnumber-sys [![crates.io](https://img.shields.io/crates/v/decnumber-sys.svg)](https://crates.io/crates/decnumber-sys)
 
@@ -22,9 +22,9 @@ Low-level bindings to libdecnumber.
 ```
 # Cargo.toml
 [dependencies]
-decnumber-sys = "0.1.3"
+decnumber-sys = "0.1.4"
 ```
 
-**[View documentation.](https://docs.rs/decnumber-sys/0.1.3/)**
+**[View documentation.](https://docs.rs/decnumber-sys/0.1.4/)**
 
 [libdecnumber]: http://speleotrove.com/decimal/decnumber.html
