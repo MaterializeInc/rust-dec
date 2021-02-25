@@ -16,9 +16,17 @@ decnumber-sys = { version = "0.1.0", path = "../decnumber-sys" }
 libc = "0.2.82"
 static_assertions = { version = "1.1.0", optional = true }
 
+[dev-dependencies]
+criterion = "0.3.0"
+rand = "0.7.3"
+
 [features]
 arbitrary-precision = ["static_assertions"]
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[[bench]]
+name = "dec"
+harness = false
