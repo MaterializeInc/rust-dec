@@ -5,7 +5,12 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-# 0.1.3 - 2020-02-03
+## 0.1.4 - 2020-02-25
+
+* Expose lookup tables for converting DPD to binary: `DPD2BIN`, `DPD2BINK`,
+  `DPD2BINM`, `DECCOMBMSD`.
+
+## 0.1.3 - 2020-02-03
 
 * Import a patch that corrects `decDoubleIsSigned` and `decQuadIsSigned`, which
   were previously inverted from their documented behavior.
