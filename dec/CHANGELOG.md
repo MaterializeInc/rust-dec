@@ -5,6 +5,10 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## Unreleased
+
+* Add the `set_exponent` method to `Context::<Decimal64>` and `Context::<Decimal128>`.
+
 ## 0.3.1 - 2021-02-25
 
 * Add the `coefficient` method to `Decimal32`, `Decimal64`, and `Decimal128`,

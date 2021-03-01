@@ -973,6 +973,13 @@ impl Context<Decimal128> {
         x
     }
 
+    /// Sets `d`'s exponent to `e` _without_ modifying the coefficient.
+    pub fn set_exponent(&mut self, d: &mut Decimal128, e: i32) {
+        unsafe {
+            decnumber_sys::decQuadSetExponent(&mut d.inner, &mut self.inner, e);
+        }
+    }
+
     /// Shifts the digits of `lhs` by `rhs`.
     ///
     /// If `rhs` is positive, shifts to the left. If `rhs` is negative, shifts
