@@ -594,3 +594,49 @@ fn test_decimal64_ops() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+#[test]
+fn test_decimal64_set_exponent() -> Result<(), Box<dyn Error>> {
+    let mut cx = Context::<Decimal64>::default();
+    let d = Decimal64::from(3);
+    let mut d = cx.div(d, Decimal64::from(2));
+
+    assert_eq!(d.exponent(), -1);
+    assert_eq!("1.5", d.to_string());
+
+    cx.set_exponent(&mut d, -2);
+
+    assert_eq!(d.exponent(), -2);
+    assert_eq!("0.15", d.to_string());
+
+    cx.set_exponent(&mut d, 0);
+    let d = cx.reduce(d);
+
+    assert_eq!(d.exponent(), 0);
+    assert_eq!("15", d.to_string());
+
+    Ok(())
+}
+
+#[test]
+fn test_decimal128_set_exponent() -> Result<(), Box<dyn Error>> {
+    let mut cx = Context::<Decimal128>::default();
+    let d = Decimal128::from(3);
+    let mut d = cx.div(d, Decimal128::from(2));
+
+    assert_eq!(d.exponent(), -1);
+    assert_eq!("1.5", d.to_string());
+
+    cx.set_exponent(&mut d, -2);
+
+    assert_eq!(d.exponent(), -2);
+    assert_eq!("0.15", d.to_string());
+
+    cx.set_exponent(&mut d, 0);
+    let d = cx.reduce(d);
+
+    assert_eq!(d.exponent(), 0);
+    assert_eq!("15", d.to_string());
+
+    Ok(())
+}
