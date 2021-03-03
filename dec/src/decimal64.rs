@@ -195,6 +195,18 @@ impl Decimal64 {
         r
     }
 
+    /// Returns the individual digits of the coefficient in 8-bit, unpacked
+    /// [binary-coded decimal][bcd] format.
+    ///
+    /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
+    pub fn coefficient_digits(&self) -> [u8; decnumber_sys::DECDOUBLE_Pmax] {
+        let mut buf = MaybeUninit::<[u8; decnumber_sys::DECDOUBLE_Pmax]>::uninit();
+        unsafe {
+            decnumber_sys::decDoubleGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8);
+            buf.assume_init()
+        }
+    }
+
     /// Computes the exponent of the number.
     pub fn exponent(&self) -> i32 {
         unsafe { decnumber_sys::decDoubleGetExponent(&self.inner) }
