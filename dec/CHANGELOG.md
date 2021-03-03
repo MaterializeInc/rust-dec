@@ -9,6 +9,12 @@ Versioning].
 
 * Add the `set_exponent` method to `Context::<Decimal64>` and `Context::<Decimal128>`.
 
+* Add the `coefficient_digits` method to `Decimal64` and `Decimal128` to return
+  a number's coefficient's individual digits.
+
+  Other methods largely obviate this method's uses, e.g. `coefficient`, but we
+  provide it to expose more of `libdecnumber`'s API.
+
 ## 0.3.1 - 2021-02-25
 
 * Add the `coefficient` method to `Decimal32`, `Decimal64`, and `Decimal128`,
