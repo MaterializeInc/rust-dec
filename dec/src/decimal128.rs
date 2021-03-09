@@ -355,6 +355,12 @@ impl Decimal128 {
             Ordering::Equal
         }
     }
+
+    /// Returns a string of the number in standard notation, i.e. guaranteed to
+    /// not be scientific notation.
+    pub fn to_standard_notation_string(&self) -> String {
+        to_standard_notation_string!(self)
+    }
 }
 
 impl Default for Decimal128 {

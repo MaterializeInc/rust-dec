@@ -15,6 +15,10 @@ Versioning].
   Other methods largely obviate this method's uses, e.g. `coefficient`, but we
   provide it to expose more of `libdecnumber`'s API.
 
+* Add the `to_standard_notation_string` to `Decimal64` and `Decimal128` to
+  generate string representations of digits that, for example, avoid the
+  truncation in scientific notation.
+
 ## 0.3.1 - 2021-02-25
 
 * Add the `coefficient` method to `Decimal32`, `Decimal64`, and `Decimal128`,
