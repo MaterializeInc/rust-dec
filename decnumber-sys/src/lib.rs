@@ -1098,4 +1098,5 @@ extern "C" {
     pub static DPD2BINK: [u32; 1024];
     pub static DPD2BINM: [u32; 1024];
     pub static DECCOMBMSD: [u32; 64];
+    pub static BIN2CHAR: [u8; 4001];
 }
