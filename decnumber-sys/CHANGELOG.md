@@ -5,6 +5,11 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## Unreleased
+
+* Expose the lookup table for converting binary numbers 0-999 to their
+  3-character representations, `BIN2CHAR`.
+
 ## 0.1.4 - 2020-02-25
 
 * Expose lookup tables for converting DPD to binary: `DPD2BIN`, `DPD2BINK`,
