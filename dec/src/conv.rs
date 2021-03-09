@@ -52,3 +52,52 @@ macro_rules! __from_int {
         d
     }};
 }
+
+/// Converts from some decimal into a string in standard notation.
+macro_rules! to_standard_notation_string {
+    ($d:expr) => {{
+        let digits = $d.coefficient_digits();
+        let digits = {
+            let i = digits.iter().position(|d| *d != 0).unwrap_or(digits.len() - 1);
+            &digits[i..]
+        };
+        let ndigits = digits.len() as i32;
+        let e = $d.exponent();
+        // We allocate space for all the digits plus a possible "-0." prefix. This is usually an overestimate but is an underestimate for very large or very small scales.
+        let mut out = String::with_capacity(digits.len() + 3);
+        if $d.is_negative() {
+            out.push('-');
+        }
+        if e >= 0 {
+            // All digits before the decimal point.
+            for d in digits {
+                out.push(char::from(b'0' + *d));
+            }
+            if !$d.is_zero() {
+                for _ in 0..e {
+                    out.push('0');
+                }
+            }
+        } else if ndigits > -e {
+            // Digits span the decimal point.
+            let e = -e as usize;
+            for d in &digits[..e] {
+                out.push(char::from(b'0' + *d));
+            }
+            out.push('.');
+            for d in &digits[e..] {
+                out.push(char::from(b'0' + *d));
+            }
+        } else {
+            // All digits after the decimal point.
+            out.push_str("0.");
+            for _ in 0..(-e - ndigits) {
+                out.push('0');
+            }
+            for d in digits {
+                out.push(char::from(b'0' + *d));
+            }
+        }
+        out
+    }};
+}

@@ -40,5 +40,60 @@ pub fn bench_decode(c: &mut Criterion) {
     c.bench_function("decode_decimal128", |b| bench_decode_decimal128(d128, b));
 }
 
-criterion_group!(benches, bench_decode);
+pub fn bench_to_string(d: Decimal128, b: &mut Bencher) {
+    b.iter_with_setup(
+        || {
+            let mut cx = Context::<Decimal128>::default();
+            [-50, 0, 50]
+                .iter()
+                .map(|exp| {
+                    let mut d = d.clone();
+                    cx.set_exponent(&mut d, *exp);
+                    d
+                })
+                .collect::<Vec<_>>()
+        },
+        |d| {
+            for d in d {
+                d.to_string();
+            }
+        },
+    )
+}
+
+pub fn bench_standard_notation_string(d: Decimal128, b: &mut Bencher) {
+    b.iter_with_setup(
+        || {
+            let mut cx = Context::<Decimal128>::default();
+            [-50, 0, 50]
+                .iter()
+                .map(|exp| {
+                    let mut d = d.clone();
+                    cx.set_exponent(&mut d, *exp);
+                    d
+                })
+                .collect::<Vec<_>>()
+        },
+        |d| {
+            for d in d {
+                d.to_standard_notation_string();
+            }
+        },
+    )
+}
+
+pub fn bench_print(c: &mut Criterion) {
+    let mut rng = thread_rng();
+    let mut cx = Context::<Decimal128>::default();
+    let d128 = cx.from_i128(rng.gen());
+    c.bench_function("to_string_dec128", |b| bench_to_string(d128.clone(), b));
+    let mut rng = thread_rng();
+    let mut cx = Context::<Decimal128>::default();
+    let d128 = cx.from_i128(rng.gen());
+    c.bench_function("to_standard_notation_string_dec128", |b| {
+        bench_standard_notation_string(d128, b)
+    });
+}
+
+criterion_group!(benches, bench_decode, bench_print);
 criterion_main!(benches);
