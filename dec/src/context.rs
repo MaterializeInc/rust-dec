@@ -191,11 +191,21 @@ impl Status {
         self.inner & decnumber_sys::DEC_Conversion_syntax != 0
     }
 
+    /// Sets `self`'s  conversion syntax flag.
+    pub fn set_conversion_syntax(&mut self) {
+        self.inner |= decnumber_sys::DEC_Conversion_syntax;
+    }
+
     /// Reports whether the division by zero flag is set.
     ///
     /// Operations set this flag when a nonzero dividend is divided by zero.
     pub fn division_by_zero(&self) -> bool {
         self.inner & decnumber_sys::DEC_Division_by_zero != 0
+    }
+
+    /// Sets `self`'s division by zero flag.
+    pub fn set_division_by_zero(&mut self) {
+        self.inner |= decnumber_sys::DEC_Division_by_zero;
     }
 
     /// Reports whether the division impossible flag is set.
@@ -206,11 +216,21 @@ impl Status {
         self.inner & decnumber_sys::DEC_Division_impossible != 0
     }
 
+    /// Sets `self`'s division impossible flag.
+    pub fn set_division_impossible(&mut self) {
+        self.inner |= decnumber_sys::DEC_Division_impossible;
+    }
+
     /// Reports whether the division undefined flag is set.
     ///
     /// Operations set this flag when a zero dividend is divided by zero.
     pub fn division_undefined(&self) -> bool {
         self.inner & decnumber_sys::DEC_Division_undefined != 0
+    }
+
+    /// Sets `self`'s division undefined flag.
+    pub fn set_division_undefined(&mut self) {
+        self.inner |= decnumber_sys::DEC_Division_undefined;
     }
 
     /// Reports whether the insufficient storage flag is set.
@@ -220,12 +240,22 @@ impl Status {
         self.inner & decnumber_sys::DEC_Insufficient_storage != 0
     }
 
+    /// Sets `self`'s insufficient storage flag.
+    pub fn set_insufficient_storage(&mut self) {
+        self.inner |= decnumber_sys::DEC_Insufficient_storage;
+    }
+
     /// Reports whether the inexact flag is set.
     ///
     /// Operations set this flag when one or more nonzero coefficient digits
     /// were discarded during rounding from a result.
     pub fn inexact(&self) -> bool {
         self.inner & decnumber_sys::DEC_Inexact != 0
+    }
+
+    /// Sets `self`'s inexact flag.
+    pub fn set_inexact(&mut self) {
+        self.inner |= decnumber_sys::DEC_Inexact;
     }
 
     /// Reports whether the invalid context flag is set.
@@ -239,11 +269,21 @@ impl Status {
         self.inner & decnumber_sys::DEC_Invalid_context != 0
     }
 
+    /// Sets `self`'s invalid context flag.
+    pub fn set_invalid_context(&mut self) {
+        self.inner |= decnumber_sys::DEC_Invalid_context;
+    }
+
     /// Reports whether the invalid operation flag is set.
     ///
     /// Various operations set this flag in response to invalid arguments.
     pub fn invalid_operation(&self) -> bool {
         self.inner & decnumber_sys::DEC_Invalid_operation != 0
+    }
+
+    /// Sets `self`'s invalid operation flag.
+    pub fn set_invalid_operation(&mut self) {
+        self.inner |= decnumber_sys::DEC_Invalid_operation;
     }
 
     /// Reports whether the overflow flag is set.
@@ -252,6 +292,11 @@ impl Status {
     /// be represented.
     pub fn overflow(&self) -> bool {
         self.inner & decnumber_sys::DEC_Overflow != 0
+    }
+
+    /// Sets `self`'s overflow flag.
+    pub fn set_overflow(&mut self) {
+        self.inner |= decnumber_sys::DEC_Overflow;
     }
 
     /// Reports whether the clamped flag is set.
@@ -263,12 +308,22 @@ impl Status {
         self.inner & decnumber_sys::DEC_Clamped != 0
     }
 
+    /// Sets `self`'s clamped flag.
+    pub fn set_clamped(&mut self) {
+        self.inner |= decnumber_sys::DEC_Clamped;
+    }
+
     /// Reports whether the rounded flag is set.
     ///
     /// Operations set this flag when one or more zero or nonzero coefficient
     /// digits were discarded from a result.
     pub fn rounded(&self) -> bool {
         self.inner & decnumber_sys::DEC_Rounded != 0
+    }
+
+    /// Sets `self`'s rounded flag.
+    pub fn set_rounded(&mut self) {
+        self.inner |= decnumber_sys::DEC_Rounded;
     }
 
     /// Reports whether the subnormal flag is set.
@@ -279,11 +334,27 @@ impl Status {
         self.inner & decnumber_sys::DEC_Subnormal != 0
     }
 
+    /// Sets `self`'s subnormal flag.
+    pub fn set_subnormal(&mut self) {
+        self.inner |= decnumber_sys::DEC_Subnormal;
+    }
+
     /// Reports whether the underflow flag is set.
     ///
     /// Operations set this flag when a result is both subnormal and inexact.
     pub fn underflow(&self) -> bool {
         self.inner & decnumber_sys::DEC_Underflow != 0
+    }
+
+    /// Sets `self`'s underflow flag.
+    pub fn set_underflow(&mut self) {
+        self.inner |= decnumber_sys::DEC_Underflow;
+    }
+}
+
+impl Default for Status {
+    fn default() -> Self {
+        Status { inner: 0 }
     }
 }
 
