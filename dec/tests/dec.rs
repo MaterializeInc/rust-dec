@@ -22,7 +22,7 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
 
-use dec::{Context, Decimal128, Decimal32, Decimal64, OrderedDecimal};
+use dec::{Context, Decimal128, Decimal32, Decimal64, OrderedDecimal, Status};
 
 #[derive(Default)]
 struct ValidatingHasher {
@@ -792,4 +792,133 @@ fn test_standard_notation_dec_128() {
             ),
         ],
     );
+}
+
+#[test]
+fn test_decimal64_rescale() -> Result<(), Box<dyn Error>> {
+    let mut inexact_error = Status::default();
+    inexact_error.set_inexact();
+    let mut invalid_op_error = Status::default();
+    invalid_op_error.set_invalid_operation();
+
+    let new_cx = || Context::<Decimal64>::default();
+    let mut cx = new_cx();
+    let d = cx.div(Decimal64::from(22), Decimal64::from(7));
+    let d_original = cx.scaleb(d, Decimal64::from(7));
+
+    assert_eq!(d_original.exponent(), -8);
+    assert_eq!(d_original.to_string(), "31428571.42857143");
+
+    // 5 digits of scale
+    let mut d = d_original;
+    cx.rescale(&mut d, -5);
+    // assert_eq!(d.exponent(), -5);
+    assert_eq!(d.to_string(), "31428571.42857");
+    // Context status reports inexact only when you drop some but not all
+    // decimal values.
+    assert!(cx.status() == inexact_error);
+
+    // 0 digits of scale
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, 0);
+    assert_eq!(d.exponent(), 0);
+    assert_eq!(d.to_string(), "31428571");
+    assert!(!cx.status().any());
+
+    // E+5
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, 5);
+    assert_eq!(d.exponent(), 5);
+    assert_eq!(d.to_string(), "3.14E+7");
+    assert!(!cx.status().any());
+
+    // Invent zeroes when going from higher to lower scales
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, 5);
+    cx.rescale(&mut d, -5);
+    assert_eq!(d.exponent(), -5);
+    assert_eq!(d.to_string(), "31400000.00000");
+    assert!(!cx.status().any());
+
+    // Invalid operation when new exponent exceeds min/max exponent.
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, 100);
+    assert!(cx.status() == invalid_op_error);
+
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, -100);
+    assert!(cx.status() == invalid_op_error);
+
+    Ok(())
+}
+
+#[test]
+fn test_decimal128_rescale() -> Result<(), Box<dyn Error>> {
+    let mut inexact_error = Status::default();
+    inexact_error.set_inexact();
+    let mut invalid_op_error = Status::default();
+    invalid_op_error.set_invalid_operation();
+
+    let new_cx = || Context::<Decimal128>::default();
+    let mut cx = new_cx();
+    let d = cx.div(Decimal128::from(22), Decimal128::from(7));
+    let d_original = cx.scaleb(d, Decimal128::from(7));
+
+    assert_eq!(d_original.exponent(), -26);
+    assert_eq!(
+        d_original.to_string(),
+        "31428571.42857142857142857142857143"
+    );
+
+    // 5 digits of scale
+    let mut d = d_original;
+    cx.rescale(&mut d, -5);
+    assert_eq!(d.exponent(), -5);
+    assert_eq!(d.to_string(), "31428571.42857");
+    // Context status reports inexact only when you drop some but not all
+    // decimal values.
+    assert!(cx.status() == inexact_error);
+
+    // 0 digits of scale
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, 0);
+    assert_eq!(d.exponent(), 0);
+    assert_eq!(d.to_string(), "31428571");
+    assert!(!cx.status().any());
+
+    // E+5
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, 5);
+    assert_eq!(d.exponent(), 5);
+    assert_eq!(d.to_string(), "3.14E+7");
+    assert!(!cx.status().any());
+
+    // Invent zeroes when going from higher to lower scales
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, 5);
+    cx.rescale(&mut d, -5);
+    assert_eq!(d.exponent(), -5);
+    assert_eq!(d.to_string(), "31400000.00000");
+    assert!(!cx.status().any());
+
+    // Invalid operation when new exponent exceeds min/max exponent.
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, 100);
+    assert!(cx.status() == invalid_op_error);
+
+    let mut d = d_original;
+    let mut cx = new_cx();
+    cx.rescale(&mut d, -100);
+    assert!(cx.status() == invalid_op_error);
+
+    Ok(())
 }

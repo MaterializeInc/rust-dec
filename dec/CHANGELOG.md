@@ -9,6 +9,10 @@ Versioning].
 
 * Add the `set_exponent` method to `Context::<Decimal64>` and `Context::<Decimal128>`.
 
+* Add the `rescale` method to `Context::<Decimal64>` and
+  `Context::<Decimal128>`, which represents an equivalent number with as many of
+  the same significant digits as possible.
+
 * Add the `coefficient_digits` method to `Decimal64` and `Decimal128` to return
   a number's coefficient's individual digits.
 
