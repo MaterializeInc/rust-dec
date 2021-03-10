@@ -643,6 +643,23 @@ fn test_decimal128_set_exponent() -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn test_standard_notation_dec_64() {
+    // Test output on summed numbers
+    fn sum_inner(l: &str, r: &str) {
+        let mut cx = Context::<Decimal128>::default();
+        let l = cx.parse(l).unwrap();
+        let r = cx.parse(r).unwrap();
+        let s = l + r;
+        assert_eq!(s.to_string(), s.to_standard_notation_string());
+    }
+    sum_inner("1.23", "2.34");
+    sum_inner(".123", ".234");
+    sum_inner("1.23", ".234");
+    sum_inner("1.23", "234");
+    sum_inner("1.23", ".77");
+    sum_inner("10", "2");
+    sum_inner("-1.23", "1.23");
+
+    // Test output on a div that maxes out precision
     let mut cx = Context::<Decimal64>::default();
     let l = cx.parse("1.2103500000").unwrap();
     let r = Decimal64::ONE / l;
@@ -659,7 +676,8 @@ fn test_standard_notation_dec_64() {
         }
     }
 
-    // Some large number
+    // Test rescaling numbers
+    // - Some large number
     inner(
         -123456789012345678,
         &[
@@ -674,7 +692,7 @@ fn test_standard_notation_dec_64() {
         ],
     );
 
-    // Zero
+    // - Zero
     inner(
         0,
         &[
@@ -688,7 +706,7 @@ fn test_standard_notation_dec_64() {
         ],
     );
 
-    // Intrinsic trailing zeroes
+    // - Intrinsic trailing zeroes
     inner(
         -1000000000000000,
         &[
@@ -706,9 +724,27 @@ fn test_standard_notation_dec_64() {
 
 #[test]
 fn test_standard_notation_dec_128() {
+    // Test output on summed numbers
+    fn sum_inner(l: &str, r: &str) {
+        let mut cx = Context::<Decimal128>::default();
+        let l = cx.parse(l).unwrap();
+        let r = cx.parse(r).unwrap();
+        let s = l + r;
+        assert_eq!(s.to_string(), s.to_standard_notation_string());
+    }
+    sum_inner("1.23", "2.34");
+    sum_inner(".123", ".234");
+    sum_inner("1.23", ".234");
+    sum_inner("1.23", "234");
+    sum_inner("1.23", ".77");
+    sum_inner("10", "2");
+    sum_inner("-1.23", "1.23");
+
+    // Test output on a div that maxes out precision
     let mut cx = Context::<Decimal128>::default();
-    let l = cx.parse("1.2103500000").unwrap();
-    let r = Decimal128::ONE / l;
+    let d = cx.parse("1.21035").unwrap();
+
+    let r = Decimal128::ONE / d;
     assert_eq!(
         "0.8262072954104184739951253769570785",
         r.to_standard_notation_string()
@@ -725,7 +761,8 @@ fn test_standard_notation_dec_128() {
         }
     }
 
-    // Some large number
+    // Test rescaling numbers
+    // - Some large number
     inner(
         -123456789012345678901234567890123456789,
         &[
@@ -752,7 +789,7 @@ fn test_standard_notation_dec_128() {
         ],
     );
 
-    // Zero
+    // - Zero
     inner(
         0,
         &[
@@ -766,7 +803,7 @@ fn test_standard_notation_dec_128() {
         ],
     );
 
-    // Intrinsic trailing zeroes
+    // - Intrinsic trailing zeroes
     inner(
         -100000000000000000000000000000000000000,
         &[
