@@ -5,6 +5,11 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## 0.3.3 - 2021-03-10
+
+* Fix bug that could cause `to_standard_notation_string` to misplace the decimal
+  point in its returned value.
+
 ## 0.3.2 - 2021-03-10
 
 * Add the `set_exponent` method to `Context::<Decimal64>` and `Context::<Decimal128>`.
