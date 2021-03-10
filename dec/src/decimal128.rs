@@ -1014,6 +1014,41 @@ impl Context<Decimal128> {
         lhs
     }
 
+    /// Adjust `x`'s exponent to equal `s`, while retaining as many of the same
+    /// significant digits of the coefficient as permitted with the current and
+    /// new exponents.
+    ///
+    /// - When increasing the exponent's value, **irrevocably truncates** the least
+    ///   significant digits. Use caution in this context.
+    /// - When reducing the exponent's value, appends `0`s as less significant
+    ///   digits.
+    ///
+    /// ```
+    /// use dec::{Context, Decimal128};
+    /// let mut cx = Context::<Decimal128>::default();
+    /// let mut d = cx.div(Decimal128::from(5), Decimal128::from(4));
+    ///
+    /// assert_eq!(d.exponent(), -2);
+    /// assert_eq!(d.to_string(), "1.25");
+    ///
+    /// cx.rescale(&mut d, -3);
+    /// assert_eq!(d.exponent(), -3);
+    /// assert_eq!(d.to_string(), "1.250");
+    ///
+    /// cx.rescale(&mut d, -1);
+    /// assert_eq!(d.exponent(), -1);
+    /// assert_eq!(d.to_string(), "1.2");
+    ///
+    /// cx.rescale(&mut d, 0);
+    /// assert_eq!(d.exponent(), 0);
+    /// assert_eq!(d.to_string(), "1");
+    /// ```
+    pub fn rescale(&mut self, x: &mut Decimal128, s: i32) {
+        let e = x.exponent();
+        *x = self.shift(*x, Decimal128::from(e - s));
+        self.set_exponent(x, s);
+    }
+
     /// Subtracts `rhs` from `lhs`.
     pub fn sub(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
         unsafe {
