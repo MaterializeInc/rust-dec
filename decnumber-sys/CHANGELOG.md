@@ -5,7 +5,7 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## Unreleased
+## 0.1.5 - 2020-03-10
 
 * Expose the lookup table for converting binary numbers 0-999 to their
   3-character representations, `BIN2CHAR`.
