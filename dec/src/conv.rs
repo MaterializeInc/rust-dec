@@ -68,6 +68,7 @@ macro_rules! to_standard_notation_string {
         if $d.is_negative() {
             out.push('-');
         }
+
         if e >= 0 {
             // All digits before the decimal point.
             for d in digits {
@@ -80,7 +81,7 @@ macro_rules! to_standard_notation_string {
             }
         } else if ndigits > -e {
             // Digits span the decimal point.
-            let e = -e as usize;
+            let e = (ndigits + e) as usize;
             for d in &digits[..e] {
                 out.push(char::from(b'0' + *d));
             }
