@@ -381,7 +381,58 @@ impl<const N: usize> Decimal<N> {
     /// Returns a string of the number in standard notation, i.e. guaranteed to
     /// not be scientific notation.
     pub fn to_standard_notation_string(&self) -> String {
-        to_standard_notation_string!(self)
+        if !self.is_finite() {
+            return self.to_string();
+        }
+        let digits = self.coefficient_digits();
+        let digits = {
+            let i = digits
+                .iter()
+                .position(|d| *d != 0)
+                .unwrap_or(digits.len() - 1);
+            &digits[i..]
+        };
+        let ndigits = digits.len() as i32;
+        let e = self.exponent();
+        // We allocate space for all the digits plus a possible "-0." prefix.
+        // This is usually an overestimate but is an underestimate for very
+        // large or very small scales.
+        let mut out = String::with_capacity(digits.len() + 3);
+        if self.is_negative() {
+            out.push('-');
+        }
+
+        if e >= 0 {
+            // All digits before the decimal point.
+            for d in digits {
+                out.push(char::from(b'0' + *d));
+            }
+            if !self.is_zero() {
+                for _ in 0..e {
+                    out.push('0');
+                }
+            }
+        } else if ndigits > -e {
+            // Digits span the decimal point.
+            let e = (ndigits + e) as usize;
+            for d in &digits[..e] {
+                out.push(char::from(b'0' + *d));
+            }
+            out.push('.');
+            for d in &digits[e..] {
+                out.push(char::from(b'0' + *d));
+            }
+        } else {
+            // All digits after the decimal point.
+            out.push_str("0.");
+            for _ in 0..(-e - ndigits) {
+                out.push('0');
+            }
+            for d in digits {
+                out.push(char::from(b'0' + *d));
+            }
+        }
+        out
     }
 
     /// Removes insignificant trailing zeros from a number, unconditionally, and

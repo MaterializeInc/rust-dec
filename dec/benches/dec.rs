@@ -63,10 +63,52 @@ pub fn bench_to_string(d: Decimal128, b: &mut Bencher) {
     )
 }
 
+pub fn bench_to_string_64(d: Decimal64, b: &mut Bencher) {
+    b.iter_with_setup(
+        || {
+            let mut cx = Context::<Decimal64>::default();
+            [-50, 0, 50]
+                .iter()
+                .map(|exp| {
+                    let mut d = d.clone();
+                    cx.set_exponent(&mut d, *exp);
+                    d
+                })
+                .collect::<Vec<_>>()
+        },
+        |d| {
+            for d in d {
+                d.to_string();
+            }
+        },
+    )
+}
+
 pub fn bench_standard_notation_string(d: Decimal128, b: &mut Bencher) {
     b.iter_with_setup(
         || {
             let mut cx = Context::<Decimal128>::default();
+            [-50, 0, 50]
+                .iter()
+                .map(|exp| {
+                    let mut d = d.clone();
+                    cx.set_exponent(&mut d, *exp);
+                    d
+                })
+                .collect::<Vec<_>>()
+        },
+        |d| {
+            for d in d {
+                d.to_standard_notation_string();
+            }
+        },
+    )
+}
+
+pub fn bench_standard_notation_string_64(d: Decimal64, b: &mut Bencher) {
+    b.iter_with_setup(
+        || {
+            let mut cx = Context::<Decimal64>::default();
             [-50, 0, 50]
                 .iter()
                 .map(|exp| {
@@ -94,6 +136,16 @@ pub fn bench_print(c: &mut Criterion) {
     let d128 = cx.from_i128(rng.gen());
     c.bench_function("to_standard_notation_string_dec128", |b| {
         bench_standard_notation_string(d128, b)
+    });
+    let mut rng = thread_rng();
+    let mut cx = Context::<Decimal64>::default();
+    let d64 = cx.from_i64(rng.gen());
+    c.bench_function("to_string_dec64", |b| bench_to_string_64(d64.clone(), b));
+    let mut rng = thread_rng();
+    let mut cx = Context::<Decimal64>::default();
+    let d64 = cx.from_i64(rng.gen());
+    c.bench_function("to_standard_notation_string_dec64", |b| {
+        bench_standard_notation_string_64(d64, b)
     });
 }
 

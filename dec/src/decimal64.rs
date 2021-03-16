@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -331,8 +332,58 @@ impl Decimal64 {
     /// Returns a string of the number in standard notation, i.e. guaranteed to
     /// not be scientific notation.
     pub fn to_standard_notation_string(&self) -> String {
-        to_standard_notation_string!(self)
+        if !self.is_finite() {
+            return self.to_string();
+        }
+        let mut digits = [b'0'; decnumber_sys::DECDOUBLE_Pmax];
+        let mut digits_idx = 0;
+        let (sourlo, sourhi) = if cfg!(target_endian = "little") {
+            (
+                u32::from_le_bytes(self.inner.bytes[0..4].try_into().unwrap()) as usize,
+                u32::from_le_bytes(self.inner.bytes[4..8].try_into().unwrap()) as usize,
+            )
+        } else {
+            (
+                u32::from_be_bytes(self.inner.bytes[4..8].try_into().unwrap()) as usize,
+                u32::from_be_bytes(self.inner.bytes[0..4].try_into().unwrap()) as usize,
+            )
+        };
+
+        let comb = ((sourhi >> 26) & 0x1f) as usize;
+        let msd = unsafe { decnumber_sys::DECCOMBMSD[comb] };
+
+        if msd > 0 {
+            digits[digits_idx] = b'0' + msd as u8;
+            digits_idx += 1;
+        }
+
+        #[allow(unused_assignments)]
+        let mut dpd: usize = 0;
+
+        dpd = (sourhi >> 8) & 0x3ff; // declet 1
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = ((sourhi & 0xff) << 2) | (sourlo >> 30); // declet 2
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourlo >> 20) & 0x3ff; // declet 3
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourlo >> 10) & 0x3ff; // declet 4
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourlo) & 0x3ff; // declet 5
+        dpd2char!(dpd, digits, digits_idx);
+
+        stringify_digits!(self, digits, digits_idx)
     }
+}
+
+#[test]
+fn test() {
+    let mut cx = Context::<Decimal64>::default();
+    let d = cx.parse("0").unwrap();
+    println!("{:?}", d.to_standard_notation_string());
 }
 
 impl Default for Decimal64 {

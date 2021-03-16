@@ -840,7 +840,13 @@ fn test_standard_notation_dec_64() {
         for t in tests {
             cx.set_exponent(&mut d, t.0);
             assert_eq!(t.1, d.to_string());
-            assert_eq!(t.2, d.to_standard_notation_string());
+            assert_eq!(
+                t.2,
+                d.to_standard_notation_string(),
+                "{} should render {} as its standard notation string",
+                d,
+                t.2
+            );
         }
     }
 
