@@ -86,60 +86,74 @@ macro_rules! __decimal_from_int {
     }};
 }
 
-/// Converts from some decimal into a string in standard notation.
-macro_rules! to_standard_notation_string {
-    ($d:expr) => {{
-        if !$d.is_finite() {
-            return $d.to_string();
+/// Looks up character representation of a densely packed digit.
+macro_rules! dpd2char {
+    ($dpd:expr, $digits:expr, $digits_idx:expr) => {{
+        let mut u = [0u8; 4];
+        let bin_idx = (unsafe { decnumber_sys::DPD2BIN[$dpd] } as usize) << 2;
+        u.copy_from_slice(unsafe { &decnumber_sys::BIN2CHAR[bin_idx..bin_idx + 4] });
+        if $digits_idx > 0 {
+            $digits[$digits_idx..$digits_idx + 3].copy_from_slice(&u[1..4]);
+            $digits_idx += 3;
+        } else if u[0] > 0 {
+            // skip leading zeroes; left align first value
+            let d = (4 - u[0]) as usize;
+            $digits[$digits_idx..$digits_idx + u[0] as usize].copy_from_slice(&u[d..4]);
+            $digits_idx += u[0] as usize;
         }
-        let digits = $d.coefficient_digits();
-        let digits = {
-            let i = digits
-                .iter()
-                .position(|d| *d != 0)
-                .unwrap_or(digits.len() - 1);
-            &digits[i..]
-        };
-        let ndigits = digits.len() as i32;
-        let e = $d.exponent();
-        // We allocate space for all the digits plus a possible "-0." prefix.
-        // This is usually an overestimate but is an underestimate for very
-        // large or very small scales.
-        let mut out = String::with_capacity(digits.len() + 3);
-        if $d.is_negative() {
-            out.push('-');
+    }};
+}
+
+/// Produces a string-ified version of a `Vec<char>` derived from a decimal.
+macro_rules! stringify_digits {
+    ($s:expr, $digits:expr, $digits_idx:expr) => {{
+        if $digits_idx == 0 {
+            $digits[0] = b'0';
+            $digits_idx = 1;
         }
 
+        let e = $s.exponent();
         if e >= 0 {
-            // All digits before the decimal point.
-            for d in digits {
-                out.push(char::from(b'0' + *d));
+            let mut s = String::with_capacity($digits_idx + e as usize + 1);
+            if $s.is_negative() {
+                s.push('-');
             }
-            if !$d.is_zero() {
+            s.push_str(unsafe { std::str::from_utf8_unchecked(&$digits[..$digits_idx]) });
+            if $digits[0] != b'0' {
                 for _ in 0..e {
-                    out.push('0');
+                    s.push('0');
                 }
             }
-        } else if ndigits > -e {
-            // Digits span the decimal point.
-            let e = (ndigits + e) as usize;
-            for d in &digits[..e] {
-                out.push(char::from(b'0' + *d));
+            s
+        } else if $digits_idx as i32 > -e {
+            let mut s = String::with_capacity($digits_idx + 2);
+            if $s.is_negative() {
+                s.push('-');
             }
-            out.push('.');
-            for d in &digits[e..] {
-                out.push(char::from(b'0' + *d));
+            let e = ($digits_idx as i32 + e) as usize;
+            for d in &$digits[..e] {
+                s.push(char::from(*d));
             }
+            s.push('.');
+            for d in &$digits[e..$digits_idx] {
+                s.push(char::from(*d));
+            }
+            s
         } else {
+            let d = usize::try_from(-e).unwrap() - $digits_idx;
+            let mut s = String::with_capacity($digits_idx + d + 3);
+            if $s.is_negative() {
+                s.push('-');
+            }
             // All digits after the decimal point.
-            out.push_str("0.");
-            for _ in 0..(-e - ndigits) {
-                out.push('0');
+            s.push_str("0.");
+            for _ in 0..d {
+                s.push('0');
             }
-            for d in digits {
-                out.push(char::from(b'0' + *d));
+            for d in &$digits[..$digits_idx] {
+                s.push(char::from(*d));
             }
+            s
         }
-        out
     }};
 }

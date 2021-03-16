@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -355,7 +356,72 @@ impl Decimal128 {
     /// Returns a string of the number in standard notation, i.e. guaranteed to
     /// not be scientific notation.
     pub fn to_standard_notation_string(&self) -> String {
-        to_standard_notation_string!(self)
+        if !self.is_finite() {
+            return self.to_string();
+        }
+        let mut digits = [b'0'; decnumber_sys::DECQUAD_Pmax];
+        let mut digits_idx = 0;
+        let (sourlo, sourml, sourmh, sourhi) = if cfg!(target_endian = "little") {
+            (
+                u32::from_ne_bytes(self.inner.bytes[0..4].try_into().unwrap()) as usize,
+                u32::from_ne_bytes(self.inner.bytes[4..8].try_into().unwrap()) as usize,
+                u32::from_ne_bytes(self.inner.bytes[8..12].try_into().unwrap()) as usize,
+                u32::from_ne_bytes(self.inner.bytes[12..16].try_into().unwrap()) as usize,
+            )
+        } else {
+            (
+                u32::from_ne_bytes(self.inner.bytes[12..16].try_into().unwrap()) as usize,
+                u32::from_ne_bytes(self.inner.bytes[8..12].try_into().unwrap()) as usize,
+                u32::from_ne_bytes(self.inner.bytes[4..8].try_into().unwrap()) as usize,
+                u32::from_ne_bytes(self.inner.bytes[0..4].try_into().unwrap()) as usize,
+            )
+        };
+
+        let comb = ((sourhi >> 26) & 0x1f) as usize;
+        let msd = unsafe { decnumber_sys::DECCOMBMSD[comb] };
+
+        if msd > 0 {
+            digits[digits_idx] = b'0' + msd as u8;
+            digits_idx += 1;
+        }
+
+        #[allow(unused_assignments)]
+        let mut dpd: usize = 0;
+
+        dpd = (sourhi >> 4) & 0x3ff; // declet 1
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = ((sourhi & 0xf) << 6) | (sourmh >> 26); // declet 2
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourmh >> 16) & 0x3ff; // declet 3
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourmh >> 6) & 0x3ff; // declet 4
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = ((sourmh & 0x3f) << 4) | (sourml >> 28); // declet 5
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourml >> 18) & 0x3ff; // declet 6
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourml >> 8) & 0x3ff; // declet 7
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = ((sourml & 0xff) << 2) | (sourlo >> 30); // declet 8
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourlo >> 20) & 0x3ff; // declet 9
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourlo >> 10) & 0x3ff; // declet 10
+        dpd2char!(dpd, digits, digits_idx);
+
+        dpd = (sourlo) & 0x3ff; // declet 11
+        dpd2char!(dpd, digits, digits_idx);
+
+        stringify_digits!(self, digits, digits_idx)
     }
 }
 
