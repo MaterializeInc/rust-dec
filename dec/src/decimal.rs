@@ -22,6 +22,8 @@ use std::mem::MaybeUninit;
 use std::str::FromStr;
 
 use libc::c_char;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::context::{Class, Context};
 use crate::decimal128::Decimal128;
@@ -50,11 +52,52 @@ fn validate_n(n: usize) {
 /// at compile time, so they are checked at runtime.
 #[repr(C)]
 #[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Decimal<const N: usize> {
     pub(crate) digits: u32,
     pub(crate) exponent: i32,
     pub(crate) bits: u8,
+    /// Must provide custom serde implementation for array defined with const
+    /// generic until something happens with
+    /// https://github.com/serde-rs/serde/issues/1272
+    #[cfg_attr(feature = "serde", serde(with = "lsu_serde"))]
     pub(crate) lsu: [u16; N],
+}
+
+#[cfg(feature = "serde")]
+mod lsu_serde {
+    use std::convert::TryInto;
+
+    use serde::de::{Error, Unexpected};
+    use serde::ser::SerializeSeq;
+    use serde::Deserialize;
+    pub fn serialize<S, const N: usize>(v: &[u16; N], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(N))?;
+        for e in v.iter() {
+            seq.serialize_element(e)?;
+        }
+        seq.end()
+    }
+
+    pub fn deserialize<'de, D, const N: usize>(deserializer: D) -> Result<[u16; N], D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let lsu = Vec::<u16>::deserialize(deserializer)?;
+        let lsu_len = lsu.len();
+        match lsu.try_into() {
+            Ok(lsu) => Ok(lsu),
+            Err(_) => {
+                return Err(Error::invalid_value(
+                    Unexpected::Other(&format!("&[u16] of length {}", lsu_len)),
+                    &format!("&[u16] of length {}", N).as_str(),
+                ))
+            }
+        }
+    }
 }
 
 impl<const N: usize> Decimal<N> {

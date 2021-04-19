@@ -22,6 +22,8 @@ Versioning].
 
 * Implement `BitAnd`, `BitAndAssign`, `BitOr`, and `BitOrAssign` for `Status`.
 
+* Implement `serde::Serialize` and `serde::Deserialize` for `Decimal` when the
+  `serde` feature is activated.
 
 ## 0.3.3 - 2021-03-10
 
