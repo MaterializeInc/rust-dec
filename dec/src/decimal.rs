@@ -19,6 +19,7 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
+use std::ops::Neg;
 use std::str::FromStr;
 
 use libc::c_char;
@@ -326,6 +327,20 @@ impl<const N: usize> Default for Context<Decimal<N>> {
     }
 }
 
+impl<const N: usize> Neg for Decimal<N> {
+    type Output = Decimal<N>;
+
+    /// Note that this clones `self` to generate the negative value. For a
+    /// non-allocating method, use `Context::<N>::neg`.
+    fn neg(self) -> Decimal<N> {
+        let mut n = self.clone();
+        unsafe {
+            decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
+        }
+        n
+    }
+}
+
 impl<const N: usize> Context<Decimal<N>> {
     /// Returns the context's precision.
     ///
@@ -603,7 +618,8 @@ impl<const N: usize> Context<Decimal<N>> {
         }
     }
 
-    /// Subtracts `n` from zero, storing the result in `n`.
+    /// Subtracts `n` from zero, storing the result in `n`. Note that unlike
+    /// `neg`, exceptions and errors can occur.
     pub fn minus(&mut self, n: &mut Decimal<N>) {
         unsafe {
             decnumber_sys::decNumberMinus(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
@@ -619,6 +635,15 @@ impl<const N: usize> Context<Decimal<N>> {
                 rhs.as_ptr(),
                 &mut self.inner,
             );
+        }
+    }
+
+    /// Subtracts `n` from zero, storing the result in `n`. Note that unlike
+    /// `minus`, this is a "quiet" negation, i.e. no exception or error can
+    /// occur.
+    pub fn neg(&mut self, n: &mut Decimal<N>) {
+        unsafe {
+            decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
         }
     }
 
