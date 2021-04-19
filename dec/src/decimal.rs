@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
@@ -86,6 +86,15 @@ impl<const N: usize> Decimal<N> {
     /// representing the number 0.
     pub fn zero() -> Decimal<N> {
         Decimal::default()
+    }
+
+    // Constructs a decimal number equal to 2^32. We use this value internally
+    // to create decimals from primitive integers with more than 32 bits.
+    fn two_pow_32() -> Decimal<N> {
+        let mut d = Decimal::default();
+        d.digits = 10;
+        d.lsu[0..4].copy_from_slice(&[296, 967, 294, 4]);
+        d
     }
 
     /// Computes the number of significant digits in the number.
@@ -263,6 +272,91 @@ impl<const N: usize> FromStr for Decimal<N> {
 
     fn from_str(s: &str) -> Result<Decimal<N>, ParseDecimalError> {
         Context::<Decimal<N>>::default().parse(s)
+    }
+}
+impl<const N: usize> From<i32> for Decimal<N> {
+    fn from(n: i32) -> Decimal<N> {
+        validate_n(N);
+        let mut d = MaybeUninit::<Decimal<N>>::uninit();
+        unsafe {
+            decnumber_sys::decNumberFromInt32(d.as_mut_ptr() as *mut decnumber_sys::decNumber, n);
+            d.assume_init()
+        }
+    }
+}
+
+impl<const N: usize> From<u32> for Decimal<N> {
+    fn from(n: u32) -> Decimal<N> {
+        validate_n(N);
+        let mut d = MaybeUninit::<Decimal<N>>::uninit();
+        unsafe {
+            decnumber_sys::decNumberFromUInt32(d.as_mut_ptr() as *mut decnumber_sys::decNumber, n);
+            d.assume_init()
+        }
+    }
+}
+
+impl<const N: usize> From<i64> for Decimal<N> {
+    fn from(n: i64) -> Decimal<N> {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = decnum_from_signed_int!(Decimal<N>, cx, n);
+        debug_assert!(!cx.status().any());
+        d
+    }
+}
+
+impl<const N: usize> From<u64> for Decimal<N> {
+    fn from(n: u64) -> Decimal<N> {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = decnum_from_unsigned_int!(Decimal<N>, cx, n);
+        debug_assert!(!cx.status().any());
+        d
+    }
+}
+
+impl<const N: usize> From<i128> for Decimal<N> {
+    fn from(n: i128) -> Decimal<N> {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = decnum_from_signed_int!(Decimal<N>, cx, n);
+        debug_assert!(!cx.status().any());
+        d
+    }
+}
+
+impl<const N: usize> From<u128> for Decimal<N> {
+    fn from(n: u128) -> Decimal<N> {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = decnum_from_unsigned_int!(Decimal<N>, cx, n);
+        debug_assert!(!cx.status().any());
+        d
+    }
+}
+
+#[cfg(target_pointer_width = "32")]
+impl<const N: usize> From<usize> for Decimal<N> {
+    fn from(n: usize) -> Decimal<N> {
+        Decimal::<N>::from(n as u32)
+    }
+}
+
+#[cfg(target_pointer_width = "32")]
+impl<const N: usize> From<isize> for Decimal<N> {
+    fn from(n: isize) -> Decimal<N> {
+        Decimal::<N>::from(n as i32)
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+impl<const N: usize> From<usize> for Decimal<N> {
+    fn from(n: usize) -> Decimal<N> {
+        Decimal::<N>::from(n as u64)
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+impl<const N: usize> From<isize> for Decimal<N> {
+    fn from(n: isize) -> Decimal<N> {
+        Decimal::<N>::from(n as i64)
     }
 }
 
@@ -530,6 +624,63 @@ impl<const N: usize> Context<Decimal<N>> {
                 &mut self.inner,
             );
         }
+    }
+
+    /// Constructs a number from an `i128`.
+    ///
+    /// Note that this function can return inexact results for numbers with more
+    /// than `N` * 3 places of precision, e.g. where `N` is 12,
+    /// `9_999_999_999_999_999_999_999_999_999_999_999_999i128`,
+    /// `-9_999_999_999_999_999_999_999_999_999_999_999_999i128`, `i128::MAX`,
+    /// `i128::MIN`, etc.
+    ///
+    /// However, some numbers more than `N` * 3 places of precision retain their
+    /// exactness, e.g. `1_000_000_000_000_000_000_000_000_000_000_000_000i128`.
+    ///
+    /// ```
+    /// const N: usize = 12;
+    /// use dec::Decimal;
+    /// let mut ctx = dec::Context::<Decimal::<N>>::default();
+    /// let d = ctx.from_i128(i128::MAX);
+    /// // Inexact result
+    /// assert!(ctx.status().inexact());
+    ///
+    /// let mut ctx = dec::Context::<Decimal::<N>>::default();
+    /// let d = ctx.from_i128(1_000_000_000_000_000_000_000_000_000_000_000_000i128);
+    /// // Exact result
+    /// assert!(!ctx.status().inexact());
+    /// ```
+    ///
+    /// To avoid inexact results when converting from large `i64`, use
+    /// [`crate::Decimal128`] instead.
+    pub fn from_i128(&mut self, n: i128) -> Decimal<N> {
+        decnum_from_signed_int!(Decimal<N>, self, n)
+    }
+
+    /// Constructs a number from an `u128`.
+    ///
+    /// Note that this function can return inexact results for numbers with more
+    /// than `N` * 3 places of precision, e.g. where `N` is 12,
+    /// `10_000_000_000_000_000_000_000_000_000_000_001u128` and `u128::MAX`.
+    ///
+    /// However, some numbers more than `N` * 3 places of precision retain their
+    /// exactness,  e.g. `10_000_000_000_000_000_000_000_000_000_000_000u128`.
+    ///
+    /// ```
+    /// const N: usize = 12;
+    /// use dec::Decimal;
+    /// let mut ctx = dec::Context::<Decimal::<N>>::default();
+    /// let d = ctx.from_u128(u128::MAX);
+    /// // Inexact result
+    /// assert!(ctx.status().inexact());
+    ///
+    /// let mut ctx = dec::Context::<Decimal::<N>>::default();
+    /// let d = ctx.from_u128(1_000_000_000_000_000_000_000_000_000_000_000_000u128);
+    /// // Exact result
+    /// assert!(!ctx.status().inexact());
+    /// ```
+    pub fn from_u128(&mut self, n: u128) -> Decimal<N> {
+        decnum_from_unsigned_int!(Decimal<N>, self, n)
     }
 
     /// Computes the digitwise logical inversion of `n`, storing the result in
