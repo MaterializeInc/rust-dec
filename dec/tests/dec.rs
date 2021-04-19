@@ -206,6 +206,7 @@ fn test_overloading() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
 #[test]
 fn test_i64_to_decnum() -> Result<(), Box<dyn Error>> {
     use dec::Decimal;
@@ -1241,5 +1242,231 @@ fn test_ser_de() {
             Token::SeqEnd,
             Token::StructEnd,
         ],
+    );
+}
+
+#[test]
+#[cfg(feature = "arbitrary-precision")]
+fn test_to_width_decnum() {
+    const N: usize = 12;
+    const W: usize = N + 1;
+    fn wide_to_narrow(v: &str, s: &str, digits: u32, exponent: i32, precision: u64) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        let mut cx_w = Context::<dec::Decimal<W>>::default();
+        let v_w = cx_w.parse(v).unwrap();
+        let v_n = cx_n.to_width(v_w);
+        assert_eq!(v_n.to_string(), s);
+        assert_eq!(v_n.digits(), digits);
+        assert_eq!(v_n.exponent(), exponent);
+        assert_eq!(v_n.precision(), precision);
+    }
+    // Coefficient fits, exp fits
+    wide_to_narrow("1.23E+10", "1.23E+10", 3, 8, 11);
+    wide_to_narrow("1.23E-10", "1.23E-10", 3, -12, 12);
+    // Coefficient fits, exp "exceeds" precision, which has no effect
+    wide_to_narrow("1.23E+40", "1.23E+40", 3, 38, 41);
+    // Coefficient doesn't fit
+    wide_to_narrow(
+        "9876543210123456789012345678901234567",
+        "9.87654321012345678901234567890123457E+36",
+        36,
+        1,
+        37,
+    );
+    wide_to_narrow(
+        "9.87654321012345678901234567890123456789E-10",
+        "9.87654321012345678901234567890123457E-10",
+        36,
+        -45,
+        45,
+    );
+    wide_to_narrow("Infinity", "Infinity", 1, 0, 1);
+
+    fn narrow_to_wide(v: &str, s: &str, digits: u32, exponent: i32, precision: u64) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        let mut cx_w = Context::<dec::Decimal<W>>::default();
+        let v_n = cx_n.parse(v).unwrap();
+        let v_w = cx_w.to_width(v_n);
+        assert_eq!(v_w.to_string(), s);
+        assert_eq!(v_w.digits(), digits);
+        assert_eq!(v_w.exponent(), exponent);
+        assert_eq!(v_w.precision(), precision);
+    }
+    // Coefficient fits, exp fits
+    narrow_to_wide("1.23E+10", "1.23E+10", 3, 8, 11);
+    narrow_to_wide(
+        "9.87654321012345678901234567890123457E+36",
+        "9.87654321012345678901234567890123457E+36",
+        36,
+        1,
+        37,
+    );
+    narrow_to_wide("Infinity", "Infinity", 1, 0, 1);
+
+    fn min_max_exp_wide_to_narrow(v: &str, s: &str, digits: u32, exponent: i32, precision: u64) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        cx_n.set_max_exponent(N as isize * 3 - 1).unwrap();
+        cx_n.set_min_exponent(-(N as isize) * 3 + 1).unwrap();
+        let mut cx_w = Context::<dec::Decimal<W>>::default();
+        let v_w = cx_w.parse(v).unwrap();
+        let v_n = cx_n.to_width(v_w);
+        assert_eq!(v_n.to_string(), s);
+        assert_eq!(v_n.digits(), digits);
+        assert_eq!(v_n.exponent(), exponent);
+        assert_eq!(v_n.precision(), precision);
+        // panic!();
+    }
+    min_max_exp_wide_to_narrow(
+        "98765432101234567890123456789012345",
+        "98765432101234567890123456789012345",
+        35,
+        0,
+        35,
+    );
+    min_max_exp_wide_to_narrow("9E-10", "9E-10", 1, -10, 10);
+    // Exceeds max
+    min_max_exp_wide_to_narrow("9E37", "Infinity", 1, 0, 1);
+    // Exceeds min
+    min_max_exp_wide_to_narrow("9E-36", "1E-35", 1, -35, 35);
+    // ~= 9E-36
+    min_max_exp_wide_to_narrow(".000000000000000000000000000000000009", "1E-35", 1, -35, 35);
+    // ~= 9E-37
+    min_max_exp_wide_to_narrow(
+        ".0000000000000000000000000000000000009",
+        "0E-35",
+        1,
+        -35,
+        35,
+    );
+    min_max_exp_wide_to_narrow(
+        ".1234567890123456789012345678901234567",
+        "0.12345678901234567890123456789012346",
+        35,
+        -35,
+        35,
+    );
+}
+
+#[test]
+#[cfg(feature = "arbitrary-precision")]
+/// Aggregate a set of valid values with width `N` into width `M`, and then go
+/// back to `N`-width. This test is bespoke for Materialize's needs when
+/// aggregating values using library.
+fn test_agg_wide_narrow_decnum() {
+    const N: usize = 12;
+    const M: usize = N + 1;
+    fn inner(v: &[&str], e_m: &str, inexact_m: bool, e_n: &str, inexact_n: bool) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        // 35 max exp == 36 digits max
+        cx_n.set_max_exponent(N as isize * 3 - 1).unwrap();
+        let mut cx_m = Context::<dec::Decimal<M>>::default();
+        // 36 max exp == 37 digits max
+        cx_m.set_max_exponent(M as isize * 3 - 3).unwrap();
+
+        // Parse values as `N`, but then convert to `M` and aggregate.
+        let s = v
+            .iter()
+            .map(|v| {
+                let v_n = cx_n.parse(*v).unwrap();
+                cx_m.to_width(v_n)
+            })
+            .collect::<Vec<_>>();
+
+        // Aggregate.
+        let sum_m = cx_m.sum(s.iter());
+
+        // Go back to `N`.
+        let sum_n = cx_n.to_width(sum_m);
+
+        assert_eq!(sum_m.to_string(), e_m);
+        assert_eq!(cx_m.status().inexact(), inexact_m);
+        assert_eq!(sum_n.to_string(), e_n);
+        assert_eq!(cx_n.status().inexact(), inexact_n);
+    }
+    // Vanilla aggregation
+    inner(
+        &["9876543210", "123456789"],
+        "9999999999",
+        false,
+        "9999999999",
+        false,
+    );
+    // Ensure intermediate value exceeds `N`.
+    inner(
+        &[
+            "987654321012345678901234567890123456",
+            "987654321012345678901234567890123456",
+        ],
+        "1975308642024691357802469135780246912",
+        false,
+        "Infinity",
+        true,
+    );
+    inner(
+        &["9e35", "9e35"],
+        "1800000000000000000000000000000000000",
+        false,
+        "Infinity",
+        true,
+    );
+    // Ensure intermediate value exceeds `N`, negative.
+    inner(
+        &[
+            "-987654321012345678901234567890123456",
+            "-987654321012345678901234567890123456",
+        ],
+        "-1975308642024691357802469135780246912",
+        false,
+        "-Infinity",
+        true,
+    );
+    // Test infinities
+    inner(
+        &["Infinity", "Infinity"],
+        "Infinity",
+        false,
+        "Infinity",
+        false,
+    );
+    inner(&["-Infinity", "Infinity"], "NaN", false, "NaN", false);
+    // Span agg width OK
+    inner(
+        &["9e35", "9e-3"],
+        "900000000000000000000000000000000000.009",
+        false,
+        "900000000000000000000000000000000000",
+        true,
+    );
+    // Exceed `M`'s width the hard way
+    inner(
+        &[
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35",
+        ],
+        "Infinity",
+        true,
+        "Infinity",
+        // Because the wide value is infinity, the narrow value is, as well, but
+        // it isn't intrinsically aware of the aggregate's inexactitude, meaning
+        // its context does not propagate the status.
+        false,
+    );
+    // Exceed `M`'s width the easy way
+    inner(
+        &["9e35", "9e35", "9e-3"],
+        "1800000000000000000000000000000000000.01",
+        true,
+        "1.80000000000000000000000000000000000E+36",
+        true,
     );
 }

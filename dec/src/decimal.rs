@@ -28,7 +28,7 @@ use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde::Deserialize as AutoDeserialize;
 
-use crate::context::{Class, Context};
+use crate::context::{Class, Context, Status};
 use crate::decimal128::Decimal128;
 use crate::decimal32::Decimal32;
 use crate::decimal64::Decimal64;
@@ -1321,5 +1321,80 @@ impl<const N: usize> Context<Decimal<N>> {
                 &mut self.inner,
             );
         }
+    }
+
+    /// Returns `m` cast as a `Decimal::<N>`.
+    ///
+    /// `Context` uses similar statuses to arithmetic to express under- and
+    /// overflow for values whose total precisions exceeds this context's.
+    pub fn to_width<const M: usize>(&mut self, mut m: Decimal<M>) -> Decimal<N> {
+        // Check max_exponent, min_exponent over/underflow.
+        let m_precision = m.precision();
+        if m.exponent() >= 0 && m_precision as i64 > self.max_exponent() as i64 {
+            // If the adjusted exponent for a result or conversion would be
+            // larger than emax then an overflow results. (ed: in this library,
+            // infinity can represent overflow.)
+            // http://speleotrove.com/decimal/dncont.html
+            let mut inexact_overflow_rounded = Status::default();
+            inexact_overflow_rounded.set_inexact();
+            inexact_overflow_rounded.set_overflow();
+            inexact_overflow_rounded.set_rounded();
+            self.add_status(inexact_overflow_rounded);
+
+            let mut r = Decimal::<N>::infinity();
+            if m.is_negative() {
+                self.neg(&mut r);
+            }
+            return r;
+        } else if m.exponent() < 0
+            && m_precision > u64::try_from(self.min_exponent().abs()).unwrap()
+        {
+            // Underflow is rescaled, which does not necessarily return 0, which
+            // matches arithmetic semantics.
+            let mut cx_m = Context::<Decimal<M>>::default();
+            cx_m.rescale(&mut m, &Decimal::<M>::from(self.min_exponent() as i32));
+            assert!(cx_m.status().inexact());
+
+            //  If the result is also inexact, an underflow results.
+            //  http://speleotrove.com/decimal/dncont.html
+            let mut inexact_rounded_subnormal_underflow = Status::default();
+            inexact_rounded_subnormal_underflow.set_inexact();
+            inexact_rounded_subnormal_underflow.set_rounded();
+            inexact_rounded_subnormal_underflow.set_subnormal();
+            inexact_rounded_subnormal_underflow.set_underflow();
+            self.add_status(inexact_rounded_subnormal_underflow);
+        }
+
+        // If going to too-few digits, rescale to an equivalent number that fits
+        if m.digits() as u64 > self.precision() as u64 {
+            let mut cx_m = Context::<Decimal<M>>::default();
+            // digits and precision can only differ as much as exponent, which
+            // is i32.
+            let precision_diff =
+                i32::try_from(u64::from(m.digits()) - u64::try_from(self.precision()).unwrap())
+                    .unwrap();
+            let f = Decimal::<M>::from(m.exponent() + precision_diff);
+            // Rescale adjusts digits and exponent.
+            cx_m.rescale(&mut m, &f);
+
+            // Set appropriate status.
+            let mut inexact_rounded_status = Status::default();
+            inexact_rounded_status.set_inexact();
+            inexact_rounded_status.set_rounded();
+            self.add_status(inexact_rounded_status);
+        };
+
+        let mut n = Decimal::<N>::default();
+
+        let lsu_min_len = std::cmp::min(n.lsu.len(), m.lsu.len());
+
+        n.lsu[..lsu_min_len].copy_from_slice(&m.lsu[..lsu_min_len]);
+        n.bits = m.bits;
+        // These are guaranteed to fit due to the potential rescaling done
+        // above.
+        n.digits = m.digits;
+        n.exponent = m.exponent;
+
+        n
     }
 }
