@@ -73,6 +73,11 @@ impl<D> Context<D> {
         }
     }
 
+    /// Adds the given status to `self`.
+    pub fn add_status(&mut self, status: Status) {
+        self.inner.status |= status.inner
+    }
+
     /// Clears the context's status.
     pub fn clear_status(&mut self) {
         self.inner.status = 0;
