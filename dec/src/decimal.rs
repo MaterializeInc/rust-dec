@@ -67,6 +67,20 @@ impl<const N: usize> Decimal<N> {
         self as *mut Decimal<N> as *mut decnumber_sys::decNumber
     }
 
+    /// Constructs a decimal number representing an infinite value.
+    pub fn infinity() -> Decimal<N> {
+        let mut d = Decimal::default();
+        d.bits = decnumber_sys::DECINF;
+        d
+    }
+
+    /// Constructs a decimal number representing a non-signaling NaN.
+    pub fn nan() -> Decimal<N> {
+        let mut d = Decimal::default();
+        d.bits = decnumber_sys::DECNAN;
+        d
+    }
+
     /// Constructs a decimal number with `N / 3` digits of precision
     /// representing the number 0.
     pub fn zero() -> Decimal<N> {
