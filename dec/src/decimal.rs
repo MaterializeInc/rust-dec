@@ -106,6 +106,18 @@ impl<const N: usize> Decimal<N> {
         self.digits
     }
 
+    /// Returns the individual digits of the coefficient in 8-bit, unpacked
+    /// [binary-coded decimal][bcd] format.
+    ///
+    /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
+    pub fn coefficient_digits(&self) -> Vec<u8> {
+        let mut buf = vec![0; usize::try_from(self.digits()).unwrap()];
+        unsafe {
+            decnumber_sys::decNumberGetBCD(self.as_ptr(), buf.as_mut_ptr() as *mut u8);
+        };
+        buf
+    }
+
     /// Computes the exponent of the number.
     pub fn exponent(&self) -> i32 {
         self.exponent
@@ -227,6 +239,12 @@ impl<const N: usize> Decimal<N> {
     /// The meaning of these parts are unspecified and subject to change.
     pub fn to_raw_parts(&self) -> (u32, i32, u8, [u16; N]) {
         (self.digits, self.exponent, self.bits, self.lsu)
+    }
+
+    /// Returns a string of the number in standard notation, i.e. guaranteed to
+    /// not be scientific notation.
+    pub fn to_standard_notation_string(&self) -> String {
+        to_standard_notation_string!(self)
     }
 }
 
