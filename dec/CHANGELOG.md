@@ -10,7 +10,8 @@ Versioning].
 * Remove the `arbitrary-precision` feature. The arbitrary-precision `Decimal`
   type is now always compiled.
 
-* Add the `Decimal::infinity`, `Decimal::nan`, and `Decimal::rescale` methods.
+* Add the `Decimal::infinity`, `Decimal::nan`, `Decimal::rescale`, and
+  `Decimal::to_standard_notation_string` methods.
 
 ## 0.3.3 - 2021-03-10
 
@@ -19,7 +20,8 @@ Versioning].
 
 ## 0.3.2 - 2021-03-10
 
-* Add the `set_exponent` method to `Context::<Decimal64>` and `Context::<Decimal128>`.
+* Add the `set_exponent` method to `Context::<Decimal64>` an
+  `Context::<Decimal128>`.
 
 * Add the `rescale` method to `Context::<Decimal64>` and
   `Context::<Decimal128>`, which represents an equivalent number with as many of
@@ -31,8 +33,8 @@ Versioning].
   Other methods largely obviate this method's uses, e.g. `coefficient`, but we
   provide it to expose more of `libdecnumber`'s API.
 
-* Add the `to_standard_notation_string` to `Decimal64` and `Decimal128` to
-  generate string representations of digits that, for example, avoid the
+* Add the `to_standard_notation_string` method to `Decimal64` and `Decimal128`
+  to generate string representations of digits that, for example, avoid the
   truncation in scientific notation.
 
 ## 0.3.1 - 2021-02-25

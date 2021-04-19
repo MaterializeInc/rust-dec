@@ -22,7 +22,7 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
 
-use dec::{Context, Decimal128, Decimal32, Decimal64, OrderedDecimal, Status};
+use dec::{Context, Decimal, Decimal128, Decimal32, Decimal64, OrderedDecimal, Status};
 
 #[derive(Default)]
 struct ValidatingHasher {
@@ -828,6 +828,38 @@ fn test_standard_notation_dec_128() {
                 "-0.0000000001000000000000000000000000000000000",
             ),
         ],
+    );
+}
+
+#[test]
+fn test_standard_notation_decnum() {
+    const N: usize = 12;
+
+    // Test output on summed numbers
+    fn sum_inner(l: &str, r: &str) {
+        let mut cx = Context::<Decimal<N>>::default();
+        let mut l = cx.parse(l).unwrap();
+        let r = cx.parse(r).unwrap();
+        cx.add(&mut l, &r);
+        assert_eq!(l.to_string(), l.to_standard_notation_string());
+    }
+    sum_inner("1.23", "2.34");
+    sum_inner(".123", ".234");
+    sum_inner("1.23", ".234");
+    sum_inner("1.23", "234");
+    sum_inner("1.23", ".77");
+    sum_inner("10", "2");
+    sum_inner("-1.23", "1.23");
+
+    // Test output on a div that maxes out precision
+    let mut cx = Context::<Decimal<N>>::default();
+    let d = cx.parse("1.21035").unwrap();
+    let mut r = cx.parse("1").unwrap();
+    cx.div(&mut r, &d);
+
+    assert_eq!(
+        "0.826207295410418473995125376957078531",
+        r.to_standard_notation_string()
     );
 }
 
