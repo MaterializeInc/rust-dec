@@ -17,9 +17,10 @@ use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::iter::{Product, Sum};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
-use std::ops::Neg;
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
 use std::str::FromStr;
 
 use libc::c_char;
@@ -51,7 +52,7 @@ fn validate_n(n: usize) {
 /// at compile time, so they are checked at runtime.
 #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary-precision")))]
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Decimal<const N: usize> {
     digits: u32,
     exponent: i32,
@@ -432,6 +433,88 @@ impl<const N: usize> Neg for Decimal<N> {
             decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
         }
         n
+    }
+}
+
+impl<const N: usize> Add<Decimal<N>> for Decimal<N> {
+    type Output = Decimal<N>;
+
+    fn add(self, rhs: Decimal<N>) -> Decimal<N> {
+        let mut d = self.clone();
+        Context::<Decimal<N>>::default().add(&mut d, &rhs);
+        d
+    }
+}
+
+impl<const N: usize> AddAssign<Decimal<N>> for Decimal<N> {
+    fn add_assign(&mut self, rhs: Decimal<N>) {
+        Context::<Decimal<N>>::default().add(self, &rhs);
+    }
+}
+
+impl<const N: usize> Mul<Decimal<N>> for Decimal<N> {
+    type Output = Decimal<N>;
+
+    fn mul(self, rhs: Decimal<N>) -> Decimal<N> {
+        let mut d = self.clone();
+        Context::<Decimal<N>>::default().mul(&mut d, &rhs);
+        d
+    }
+}
+
+impl<const N: usize> MulAssign<Decimal<N>> for Decimal<N> {
+    fn mul_assign(&mut self, rhs: Decimal<N>) {
+        Context::<Decimal<N>>::default().mul(self, &rhs);
+    }
+}
+
+/// This implementation of `Sum` creates a new `Context::<Decimal<N>>` on each
+/// invocation, without providing a mechanism to add setting to the `Context` or
+/// return its status. Instead, we recommend using `Context::<Decimal<N>>::sum`.
+impl<const N: usize> Sum for Decimal<N> {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Decimal<N>>,
+    {
+        iter.map(|x| x).sum()
+    }
+}
+
+/// This implementation of `Sum` creates a new `Context::<Decimal<N>>` on each
+/// invocation, without providing a mechanism to add setting to the `Context` or
+/// return its status. Instead, we recommend using `Context::<Decimal<N>>::sum`.
+impl<'a, const N: usize> Sum<&'a Decimal<N>> for Decimal<N> {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Decimal<N>>,
+    {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.sum(iter)
+    }
+}
+
+/// This implementation of `Sum` creates a new `Context::<Decimal<N>>` on each
+/// invocation, without providing a mechanism to add setting to the `Context` or
+/// return its status. Instead, we recommend using `Context::<Decimal<N>>::sum`.
+impl<const N: usize> Product for Decimal<N> {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Decimal<N>>,
+    {
+        iter.map(|x| x).product()
+    }
+}
+
+/// This implementation of `Sum` creates a new `Context::<Decimal<N>>` on each
+/// invocation, without providing a mechanism to add setting to the `Context` or
+/// return its status. Instead, we recommend using `Context::<Decimal<N>>::sum`.
+impl<'a, const N: usize> Product<&'a Decimal<N>> for Decimal<N> {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Decimal<N>>,
+    {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.product(iter)
     }
 }
 
@@ -890,6 +973,17 @@ impl<const N: usize> Context<Decimal<N>> {
         }
     }
 
+    /// Takes product of elements in `iter`.
+    pub fn product<'a, I>(&mut self, iter: I) -> Decimal<N>
+    where
+        I: Iterator<Item = &'a Decimal<N>>,
+    {
+        iter.fold(Decimal::<N>::from(1), |mut product, d| {
+            self.mul(&mut product, &d);
+            product
+        })
+    }
+
     /// Rounds or pads `lhs` so that it has the same exponent as `rhs`, storing
     /// the result in `lhs`.
     pub fn quantize(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<N>) {
@@ -996,6 +1090,17 @@ impl<const N: usize> Context<Decimal<N>> {
                 &mut self.inner,
             );
         }
+    }
+
+    /// Sums all elements of `iter`.
+    pub fn sum<'a, I>(&mut self, iter: I) -> Decimal<N>
+    where
+        I: Iterator<Item = &'a Decimal<N>>,
+    {
+        iter.fold(Decimal::<N>::zero(), |mut sum, d| {
+            self.add(&mut sum, d);
+            sum
+        })
     }
 
     /// Determines the ordering of `lhs` relative to `rhs`, using the
