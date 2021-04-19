@@ -58,12 +58,17 @@ macro_rules! to_standard_notation_string {
     ($d:expr) => {{
         let digits = $d.coefficient_digits();
         let digits = {
-            let i = digits.iter().position(|d| *d != 0).unwrap_or(digits.len() - 1);
+            let i = digits
+                .iter()
+                .position(|d| *d != 0)
+                .unwrap_or(digits.len() - 1);
             &digits[i..]
         };
         let ndigits = digits.len() as i32;
         let e = $d.exponent();
-        // We allocate space for all the digits plus a possible "-0." prefix. This is usually an overestimate but is an underestimate for very large or very small scales.
+        // We allocate space for all the digits plus a possible "-0." prefix.
+        // This is usually an overestimate but is an underestimate for very
+        // large or very small scales.
         let mut out = String::with_capacity(digits.len() + 3);
         if $d.is_negative() {
             out.push('-');
