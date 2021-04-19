@@ -10,9 +10,7 @@ Versioning].
 * Remove the `arbitrary-precision` feature. The arbitrary-precision `Decimal`
   type is now always compiled.
 
-* Add the [`Decimal::infinity`] and [`Decimal::nan`] methods.
-
-
+* Add the `Decimal::infinity`, `Decimal::nan`, and `Decimal::rescale` methods.
 
 ## 0.3.3 - 2021-03-10
 

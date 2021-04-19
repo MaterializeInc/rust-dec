@@ -744,6 +744,18 @@ impl<const N: usize> Context<Decimal<N>> {
         }
     }
 
+    /// Rescales `n` to have an exponent of `exp`.
+    pub fn rescale(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<N>) {
+        unsafe {
+            decnumber_sys::decNumberRescale(
+                lhs.as_mut_ptr(),
+                lhs.as_ptr(),
+                rhs.as_ptr(),
+                &mut self.inner,
+            );
+        }
+    }
+
     /// Shifts the digits of `lhs` by `rhs`, storing the result in `lhs`.
     ///
     /// If `rhs` is positive, shifts to the left. If `rhs` is negative, shifts
