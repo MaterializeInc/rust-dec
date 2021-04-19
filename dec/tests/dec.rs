@@ -1154,3 +1154,138 @@ fn test_decimal128_rescale() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+#[test]
+fn test_to_width_decimal() {
+    use crate::Status;
+    const N: usize = 12;
+    const W: usize = N + 1;
+    fn wide_to_narrow(v: &str, s: &str, digits: u32, exponent: i32, statuses: &[fn(&mut Status)]) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        let mut cx_w = Context::<dec::Decimal<W>>::default();
+        let v_w = cx_w.parse(v).unwrap();
+        let v_n = cx_n.to_width(v_w);
+        assert_eq!(v_n.to_string(), s);
+        assert_eq!(v_n.digits(), digits);
+        assert_eq!(v_n.exponent(), exponent);
+        let mut status = Status::default();
+        for set_status in statuses {
+            set_status(&mut status);
+        }
+        assert_eq!(cx_n.status(), status);
+    }
+    // Coefficient fits, exp fits
+    wide_to_narrow("1.23E+10", "1.23E+10", 3, 8, &[]);
+    wide_to_narrow("1.23E-10", "1.23E-10", 3, -12, &[]);
+    // Coefficient fits, exp "exceeds" precision, which has no effect
+    wide_to_narrow("1.23E+40", "1.23E+40", 3, 38, &[]);
+    // Coefficient doesn't fit
+    wide_to_narrow(
+        "9876543210123456789012345678901234567",
+        "9.87654321012345678901234567890123457E+36",
+        36,
+        1,
+        &[Status::set_inexact, Status::set_rounded],
+    );
+    wide_to_narrow(
+        "9.87654321012345678901234567890123456789E-10",
+        "9.87654321012345678901234567890123457E-10",
+        36,
+        -45,
+        &[Status::set_inexact, Status::set_rounded],
+    );
+    wide_to_narrow("Infinity", "Infinity", 1, 0, &[]);
+
+    fn narrow_to_wide(v: &str, s: &str, digits: u32, exponent: i32) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        let mut cx_w = Context::<dec::Decimal<W>>::default();
+        let v_n = cx_n.parse(v).unwrap();
+        let v_w = cx_w.to_width(v_n);
+        assert_eq!(v_w.to_string(), s);
+        assert_eq!(v_w.digits(), digits);
+        assert_eq!(v_w.exponent(), exponent);
+        assert!(!cx_n.status().any());
+    }
+    // Coefficient fits, exp fits
+    narrow_to_wide("1.23E+10", "1.23E+10", 3, 8);
+    narrow_to_wide(
+        "9.87654321012345678901234567890123457E+36",
+        "9.87654321012345678901234567890123457E+36",
+        36,
+        1,
+    );
+    narrow_to_wide("Infinity", "Infinity", 1, 0);
+
+    fn min_max_exp_wide_to_narrow(
+        v: &str,
+        s: &str,
+        digits: u32,
+        exponent: i32,
+        statuses: &[fn(&mut Status)],
+    ) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        cx_n.set_max_exponent(N as isize * 3 - 1).unwrap();
+        cx_n.set_min_exponent(-(N as isize) * 3 + 1).unwrap();
+        let mut cx_w = Context::<dec::Decimal<W>>::default();
+        let v_w = cx_w.parse(v).unwrap();
+        let v_n = cx_n.to_width(v_w);
+        assert_eq!(v_n.to_string(), s);
+        assert_eq!(v_n.digits(), digits);
+        assert_eq!(v_n.exponent(), exponent);
+        let mut status = Status::default();
+        for set_status in statuses {
+            set_status(&mut status);
+        }
+        assert_eq!(cx_n.status(), status);
+    }
+    min_max_exp_wide_to_narrow(
+        "98765432101234567890123456789012345",
+        "98765432101234567890123456789012345",
+        35,
+        0,
+        &[],
+    );
+    min_max_exp_wide_to_narrow("9E-10", "9E-10", 1, -10, &[]);
+    // Exceeds max
+    min_max_exp_wide_to_narrow(
+        "9E37",
+        "Infinity",
+        1,
+        0,
+        &[
+            Status::set_inexact,
+            Status::set_overflow,
+            Status::set_rounded,
+        ],
+    );
+    // Exceeds min
+    min_max_exp_wide_to_narrow("9E-36", "9E-36", 1, -36, &[Status::set_subnormal]);
+    // ~= 9E-37
+    min_max_exp_wide_to_narrow(
+        ".0000000000000000000000000000000000009",
+        "9E-37",
+        1,
+        -37,
+        &[Status::set_subnormal],
+    );
+    min_max_exp_wide_to_narrow(
+        ".12345678901234567890123456789012345678901234567890",
+        "0.123456789012345678901234567890123457",
+        36,
+        -36,
+        &[Status::set_inexact, Status::set_rounded],
+    );
+    min_max_exp_wide_to_narrow(
+        "9E-100",
+        "0E-70",
+        1,
+        -70,
+        &[
+            Status::set_clamped,
+            Status::set_inexact,
+            Status::set_rounded,
+            Status::set_subnormal,
+            Status::set_underflow,
+        ],
+    );
+}

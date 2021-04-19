@@ -1064,4 +1064,16 @@ impl<const N: usize> Context<Decimal<N>> {
             );
         }
     }
+
+    /// Returns `m` cast as a `Decimal::<N>`.
+    ///
+    /// `Context` uses similar statuses to arithmetic to express under- and
+    /// overflow for values whose total precisions exceeds this context's.
+    pub fn to_width<const M: usize>(&mut self, m: Decimal<M>) -> Decimal<N> {
+        let mut n = Decimal::<N>::zero();
+        unsafe {
+            decnumber_sys::decNumberPlus(n.as_mut_ptr(), m.as_ptr(), &mut self.inner);
+        }
+        n
+    }
 }
