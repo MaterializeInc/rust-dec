@@ -22,7 +22,11 @@ use std::ops::{
 };
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+
 use crate::context::Context;
+#[cfg(feature = "arbitrary-precision")]
+use crate::decimal::Decimal;
 use crate::decimal128::Decimal128;
 use crate::decimal32::Decimal32;
 use crate::decimal64::Decimal64;
@@ -49,7 +53,7 @@ use crate::error::ParseDecimalError;
 ///
 /// [`OrderedFloat`]: https://docs.rs/ordered-float/2.0.1/ordered_float/struct.OrderedFloat.html
 /// [`ordered_float`]: https://crates.io/crates/ordered-float
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct OrderedDecimal<D>(pub D);
 
 impl<D> OrderedDecimal<D> {
@@ -161,6 +165,56 @@ impl Hash for OrderedDecimal<Decimal128> {
             Context::<Decimal128>::default().reduce(self.0)
         };
         d.inner.bytes.hash(state)
+    }
+}
+
+#[cfg(feature = "arbitrary-precision")]
+impl<const N: usize> Ord for OrderedDecimal<Decimal<N>> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let mut cx = Context::<Decimal<N>>::default();
+        let mut lhs = self.0.clone();
+        let mut rhs = other.0.clone();
+        cx.reduce(&mut lhs);
+        cx.reduce(&mut rhs);
+        match cx.partial_cmp(&lhs, &rhs) {
+            Some(ordering) => ordering,
+            None => {
+                if lhs.is_nan() {
+                    if rhs.is_nan() {
+                        Ordering::Equal
+                    } else {
+                        Ordering::Greater
+                    }
+                } else {
+                    Ordering::Less
+                }
+            }
+        }
+    }
+}
+
+#[cfg(feature = "arbitrary-precision")]
+impl<const N: usize> Hash for OrderedDecimal<Decimal<N>> {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        let d = if self.0.is_nan() {
+            Decimal::<N>::nan()
+        } else if self.0.is_infinite() {
+            let mut d = Decimal::<N>::infinity();
+            if self.0.is_negative() {
+                Context::<Decimal<N>>::default().neg(&mut d);
+            }
+            d
+        } else if self.0.is_zero() {
+            Decimal::<N>::zero()
+        } else {
+            let mut d = self.0.clone();
+            Context::<Decimal<N>>::default().reduce(&mut d);
+            d
+        };
+        d.hash(state);
     }
 }
 

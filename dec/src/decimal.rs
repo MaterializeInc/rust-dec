@@ -55,7 +55,7 @@ fn validate_n(n: usize) {
 /// at compile time, so they are checked at runtime.
 #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary-precision")))]
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct Decimal<const N: usize> {
     digits: u32,
     exponent: i32,
@@ -259,6 +259,18 @@ impl<const N: usize> Default for Decimal<N> {
             decnumber_sys::decNumberZero(d.as_mut_ptr() as *mut decnumber_sys::decNumber);
             d.assume_init()
         }
+    }
+}
+
+impl<const N: usize> PartialOrd for Decimal<N> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Context::<Decimal<N>>::default().partial_cmp(self, other)
+    }
+}
+
+impl<const N: usize> PartialEq for Decimal<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
     }
 }
 
