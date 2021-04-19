@@ -51,10 +51,10 @@ fn validate_n(n: usize) {
 #[repr(C)]
 #[derive(Clone)]
 pub struct Decimal<const N: usize> {
-    digits: u32,
-    exponent: i32,
-    bits: u8,
-    lsu: [u16; N],
+    pub(crate) digits: u32,
+    pub(crate) exponent: i32,
+    pub(crate) bits: u8,
+    pub(crate) lsu: [u16; N],
 }
 
 impl<const N: usize> Decimal<N> {
@@ -224,11 +224,24 @@ impl<const N: usize> Decimal<N> {
 impl<const N: usize> Default for Decimal<N> {
     fn default() -> Decimal<N> {
         validate_n(N);
-        let mut d = MaybeUninit::<Decimal<N>>::uninit();
-        unsafe {
-            decnumber_sys::decNumberZero(d.as_mut_ptr() as *mut decnumber_sys::decNumber);
-            d.assume_init()
+        Decimal::<N> {
+            digits: 1,
+            bits: 0,
+            exponent: 0,
+            lsu: [0; N],
         }
+    }
+}
+
+impl<const N: usize> PartialOrd for Decimal<N> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Context::<Decimal<N>>::default().partial_cmp(self, other)
+    }
+}
+
+impl<const N: usize> PartialEq for Decimal<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
     }
 }
 

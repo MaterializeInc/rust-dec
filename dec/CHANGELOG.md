@@ -13,9 +13,14 @@ Versioning].
 * Add the `Decimal::infinity`, `Decimal::nan`, `Decimal::rescale`, and
   `Decimal::to_standard_notation_string` methods.
 
-* Add the `Context::set)status` method.
+* Implement `PartialOrd` and `PartialEq` for `Decimal`.
+
+* Enable using `OrderedDecimal` with the `Decimal` type.
+
+* Add the `Context::set_status` method.
 
 * Implement `BitAnd`, `BitAndAssign`, `BitOr`, and `BitOrAssign` for `Status`.
+
 
 ## 0.3.3 - 2021-03-10
 

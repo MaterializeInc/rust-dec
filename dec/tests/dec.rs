@@ -100,6 +100,23 @@ fn test_ordered_decimal128() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+fn test_ordered_decimal() -> Result<(), Box<dyn Error>> {
+    for (lhs, rhs, expected) in ORDERING_TESTS {
+        println!("cmp({}, {}): expected {:?}", lhs, rhs, expected);
+        let lhs: OrderedDecimal<Decimal<12>> = OrderedDecimal(lhs.parse()?);
+        let rhs: OrderedDecimal<Decimal<12>> = OrderedDecimal(rhs.parse()?);
+        assert_eq!(lhs.cmp(&rhs), *expected);
+
+        if lhs == rhs && hash_data(&lhs) != hash_data(&rhs) {
+            panic!("{} and {} are equal but hashes are not equal", lhs, rhs);
+        } else if lhs != rhs && hash_data(&lhs) == hash_data(&rhs) {
+            panic!("{} and {} are equal but hashes are equal", lhs, rhs);
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn test_constants_decimal32() -> Result<(), Box<dyn Error>> {
     assert_eq!(Decimal32::ZERO.to_string(), "0");
     assert_eq!(Decimal32::ONE.to_string(), "1");

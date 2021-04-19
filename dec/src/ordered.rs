@@ -23,6 +23,7 @@ use std::ops::{
 use std::str::FromStr;
 
 use crate::context::Context;
+use crate::decimal::Decimal;
 use crate::decimal128::Decimal128;
 use crate::decimal32::Decimal32;
 use crate::decimal64::Decimal64;
@@ -161,6 +162,57 @@ impl Hash for OrderedDecimal<Decimal128> {
             Context::<Decimal128>::default().reduce(self.0)
         };
         d.inner.bytes.hash(state)
+    }
+}
+
+impl<const N: usize> Ord for OrderedDecimal<Decimal<N>> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let mut cx = Context::<Decimal<N>>::default();
+        let mut lhs = self.0.clone();
+        let mut rhs = other.0.clone();
+        cx.reduce(&mut lhs);
+        cx.reduce(&mut rhs);
+        match cx.partial_cmp(&lhs, &rhs) {
+            Some(ordering) => ordering,
+            None => {
+                if lhs.is_nan() {
+                    if rhs.is_nan() {
+                        Ordering::Equal
+                    } else {
+                        Ordering::Greater
+                    }
+                } else {
+                    Ordering::Less
+                }
+            }
+        }
+    }
+}
+
+impl<const N: usize> Hash for OrderedDecimal<Decimal<N>> {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        let d = if self.0.is_nan() {
+            Decimal::<N>::nan()
+        } else if self.0.is_infinite() {
+            let mut d = Decimal::<N>::infinity();
+            if self.0.is_negative() {
+                Context::<Decimal<N>>::default().minus(&mut d);
+            }
+            d
+        } else if self.0.is_zero() {
+            Decimal::<N>::zero()
+        } else {
+            let mut d = self.0.clone();
+            Context::<Decimal<N>>::default().reduce(&mut d);
+            d
+        };
+        d.digits.hash(state);
+        d.exponent.hash(state);
+        d.bits.hash(state);
+        d.lsu.hash(state);
     }
 }
 
