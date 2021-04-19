@@ -100,6 +100,21 @@ impl<const N: usize> Decimal<N> {
         self.exponent
     }
 
+    /// Computes the number of digits necessary in standard notation to
+    /// represent `self`, not including any leading zeroes.
+    pub fn precision(&self) -> u64 {
+        if self.exponent >= 0 {
+            // More zeroes than digits, so dominates precision
+            u64::from(self.digits) + u64::try_from(self.exponent.abs()).unwrap()
+        } else if self.exponent.abs() as usize > self.digits() as usize {
+            // Negative exponent dominates digits, so is left-padded by zeroes
+            u64::try_from(self.exponent.abs()).unwrap()
+        } else {
+            // Decimal point splices digits
+            u64::from(self.digits)
+        }
+    }
+
     /// Reports whether the number is finite.
     ///
     /// A finite number is one that is neither infinite nor a NaN.

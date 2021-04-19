@@ -959,3 +959,30 @@ fn test_decimal128_rescale() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+#[test]
+#[cfg(feature = "arbitrary-precision")]
+fn test_precision_decnum() {
+    const N: usize = 12;
+    fn inner(v: &str, p: u64) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        let v_n = cx_n.parse(v).unwrap();
+        assert_eq!(v_n.precision(), p);
+    }
+    inner("1", 1);
+    inner("10", 2);
+    inner("1e2", 3);
+    inner("1e-2", 2);
+    inner("1.2", 2);
+    inner("1.2e-2", 3);
+    inner("12e-2", 2);
+    inner("1e40", 41);
+    inner("1e-40", 40);
+    inner("0", 1);
+    // The leading zero gets folded into the exponent, i.e. 1E-1
+    inner("0.1", 1);
+    // This is still only 1 digit of precision because of its equivalence to
+    // 0E-1
+    inner("0.0", 1);
+    inner("0.0000", 4);
+}
