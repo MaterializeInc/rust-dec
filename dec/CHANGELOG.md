@@ -13,7 +13,8 @@ Versioning].
 * Add the `Decimal::infinity`, `Decimal::nan`, `Decimal::rescale`, and
   `Decimal::to_standard_notation_string` methods.
 
-* Implement `PartialOrd` and `PartialEq` for `Decimal`.
+* Implement `From<u32>`, `From<u64>`, `From<i32>`, `From<i64>`, `From<usize>`,
+  `From<isize>`, `PartialOrd` and `PartialEq` for `Decimal`.
 
 * Enable using `OrderedDecimal` with the `Decimal` type.
 

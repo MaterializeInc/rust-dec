@@ -53,6 +53,39 @@ macro_rules! __from_int {
     }};
 }
 
+macro_rules! decimal_from_signed_int {
+    ($cx:expr, $n:expr) => {
+        __decimal_from_int!(i32, $cx, $n)
+    };
+}
+
+macro_rules! decimal_from_unsigned_int {
+    ($cx:expr, $n:expr) => {
+        __decimal_from_int!(u32, $cx, $n)
+    };
+}
+
+// Equivalent to `__from_int`, but with `Decimal`'s API.
+macro_rules! __decimal_from_int {
+    ($l:ty, $cx:expr, $n:expr) => {{
+        let n = $n.to_be_bytes();
+        assert!(
+            n.len() % 4 == 0 && n.len() >= 4,
+            "from_int requires size of integer to be a multiple of 32"
+        );
+        let two_pow_32 = Decimal::<N>::two_pow_32();
+
+        let mut d = Decimal::<N>::from(<$l>::from_be_bytes(n[..4].try_into().unwrap()));
+        for i in (4..n.len()).step_by(4) {
+            $cx.mul(&mut d, &two_pow_32);
+            let n = Decimal::<N>::from(u32::from_be_bytes(n[i..i + 4].try_into().unwrap()));
+            $cx.add(&mut d, &n);
+        }
+
+        d
+    }};
+}
+
 /// Converts from some decimal into a string in standard notation.
 macro_rules! to_standard_notation_string {
     ($d:expr) => {{

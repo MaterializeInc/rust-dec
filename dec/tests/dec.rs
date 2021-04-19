@@ -221,6 +221,151 @@ fn test_overloading() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+#[test]
+fn test_i64_to_decimal() -> Result<(), Box<dyn Error>> {
+    use dec::Decimal;
+    const N: usize = 12;
+    fn inner(i: i64) {
+        assert_eq!(Decimal::<N>::from(i).to_string(), i.to_string());
+    }
+
+    inner(0);
+    inner(1i64);
+    inner(-1i64);
+    inner(i64::MAX);
+    inner(i64::MIN);
+    inner(i64::MAX / 2);
+    inner(i64::MIN / 2);
+
+    Ok(())
+}
+
+#[test]
+fn test_u64_to_decimal() -> Result<(), Box<dyn Error>> {
+    use dec::Decimal;
+    const N: usize = 12;
+    fn inner(i: u64) {
+        assert_eq!(Decimal::<N>::from(i).to_string(), i.to_string());
+    }
+
+    inner(0);
+    inner(1u64);
+    inner(u64::MAX);
+    inner(u64::MIN);
+    inner(u64::MAX / 2);
+    inner(u64::MIN / 2);
+
+    Ok(())
+}
+
+#[test]
+fn test_i128_to_decimal() -> Result<(), Box<dyn Error>> {
+    use dec::Decimal;
+    const N: usize = 12;
+    fn inner(input: i128, output: &str, inexact: bool) {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.from_i128(input).to_string();
+        assert_eq!(d.to_string(), output);
+        assert_eq!(cx.status().inexact(), inexact);
+    }
+
+    inner(1i128, "1", false);
+    inner(-1i128, "-1", false);
+    inner(i128::from(i64::MAX), "9223372036854775807", false);
+    inner(i128::from(i64::MIN), "-9223372036854775808", false);
+    inner(i128::MAX, "1.70141183460469231731687303715884105E+38", true);
+    inner(
+        i128::MIN,
+        "-1.70141183460469231731687303715884106E+38",
+        true,
+    );
+    // +34 places is exact.
+    inner(
+        i128::MAX / 100000,
+        "1701411834604692317316873037158841",
+        false,
+    );
+    inner(
+        9_999_999_999_999_999_999_999_999_999_999_999i128,
+        "9999999999999999999999999999999999",
+        false,
+    );
+    // +36 places places can be inexact.
+    inner(
+        i128::MAX / 100,
+        "1.70141183460469231731687303715884106E+36",
+        true,
+    );
+    // +36 places can be exact.
+    inner(
+        1_000_000_000_000_000_000_000_000_000_000_000_000i128,
+        "1.00000000000000000000000000000000000E+36",
+        false,
+    );
+    // -34 places is exact.
+    inner(
+        i128::MIN / 100000,
+        "-1701411834604692317316873037158841",
+        false,
+    );
+    inner(
+        -9_999_999_999_999_999_999_999_999_999_999_999i128,
+        "-9999999999999999999999999999999999",
+        false,
+    );
+    // -36 places can be inexact.
+    inner(
+        i128::MIN / 100,
+        "-1.70141183460469231731687303715884106E+36",
+        true,
+    );
+    // -36 places can be exact.
+    inner(
+        -1_000_000_000_000_000_000_000_000_000_000_000_000i128,
+        "-1.00000000000000000000000000000000000E+36",
+        false,
+    );
+    Ok(())
+}
+
+#[test]
+fn test_u128_to_decimal() -> Result<(), Box<dyn Error>> {
+    use dec::Decimal;
+    const N: usize = 12;
+    fn inner(input: u128, output: &str, inexact: bool) {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.from_u128(input).to_string();
+        assert_eq!(d.to_string(), output);
+        assert_eq!(cx.status().inexact(), inexact);
+    }
+    inner(1u128, "1", false);
+    inner(u128::MAX, "3.40282366920938463463374607431768211E+38", true);
+    inner(u128::MIN, "0", false);
+    // 34 places is exact.
+    inner(
+        u128::MAX / 100000,
+        "3402823669209384634633746074317682",
+        false,
+    );
+    inner(
+        9_999_999_999_999_999_999_999_999_999_999_999u128,
+        "9999999999999999999999999999999999",
+        false,
+    );
+    // 36 places can be exact.
+    inner(
+        1_000_000_000_000_000_000_000_000_000_000_000_000u128,
+        "1.00000000000000000000000000000000000E+36",
+        false,
+    );
+    // 36 places can be inexact.
+    inner(
+        1_000_000_000_000_000_000_000_000_000_000_000_001u128,
+        "1.00000000000000000000000000000000000E+36",
+        true,
+    );
+    Ok(())
+}
 
 #[test]
 fn test_i64_to_decimal128() -> Result<(), Box<dyn Error>> {
@@ -849,7 +994,7 @@ fn test_standard_notation_dec_128() {
 }
 
 #[test]
-fn test_standard_notation_decnum() {
+fn test_standard_notation_decimal() {
     const N: usize = 12;
 
     // Test output on summed numbers
