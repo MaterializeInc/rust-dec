@@ -24,6 +24,9 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
 use std::str::FromStr;
 
 use libc::c_char;
+use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde::Deserialize as AutoDeserialize;
 
 use crate::context::{Class, Context};
 use crate::decimal128::Decimal128;
@@ -533,6 +536,142 @@ impl<'a, const N: usize> Product<&'a Decimal<N>> for Decimal<N> {
     {
         let mut cx = Context::<Decimal<N>>::default();
         cx.product(iter)
+    }
+}
+
+impl<const N: usize> Serialize for Decimal<N> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut s = serializer.serialize_struct("Decimal", 4)?;
+        s.serialize_field("digits", &self.digits)?;
+        s.serialize_field("exponent", &self.exponent)?;
+        s.serialize_field("bits", &self.bits)?;
+        s.serialize_field("lsu", &self.lsu[..])?;
+        s.end()
+    }
+}
+
+impl<'de, const N: usize> Deserialize<'de> for Decimal<N> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(AutoDeserialize, Debug)]
+        #[serde(field_identifier, rename_all = "lowercase")]
+        enum Field {
+            Digits,
+            Exponent,
+            Bits,
+            Lsu,
+        }
+
+        struct DecimalVisitor<const N: usize>;
+
+        impl<'de, const N: usize> Visitor<'de> for DecimalVisitor<N> {
+            type Value = Decimal<N>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Decimal")
+            }
+
+            fn visit_seq<V>(self, mut seq: V) -> Result<Decimal<N>, V::Error>
+            where
+                V: SeqAccess<'de>,
+            {
+                let digits = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+                let exponent = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                let bits = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(2, &self))?;
+                let lsu: Vec<u16> = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(3, &self))?;
+
+                let lsu_len = lsu.len();
+
+                Ok(Decimal::<N> {
+                    digits,
+                    exponent,
+                    bits,
+                    lsu: match lsu.try_into() {
+                        Ok(lsu) => lsu,
+                        Err(_) => {
+                            return Err(de::Error::invalid_value(
+                                de::Unexpected::Other(&format!("&[u16] of length {}", lsu_len)),
+                                &format!("&[u16] of length {}", N).as_str(),
+                            ))
+                        }
+                    },
+                })
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Decimal<N>, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut digits = None;
+                let mut exponent = None;
+                let mut bits = None;
+                let mut lsu = None;
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Digits => {
+                            if digits.is_some() {
+                                return Err(de::Error::duplicate_field("digits"));
+                            }
+                            digits = Some(map.next_value()?);
+                        }
+                        Field::Exponent => {
+                            if exponent.is_some() {
+                                return Err(de::Error::duplicate_field("exponent"));
+                            }
+                            exponent = Some(map.next_value()?);
+                        }
+                        Field::Bits => {
+                            if bits.is_some() {
+                                return Err(de::Error::duplicate_field("exponent"));
+                            }
+                            bits = Some(map.next_value()?);
+                        }
+                        Field::Lsu => {
+                            if lsu.is_some() {
+                                return Err(de::Error::duplicate_field("exponent"));
+                            }
+                            lsu = Some(map.next_value()?);
+                        }
+                    }
+                }
+                let digits = digits.ok_or_else(|| de::Error::missing_field("digits"))?;
+                let exponent = exponent.ok_or_else(|| de::Error::missing_field("exponent"))?;
+                let bits = bits.ok_or_else(|| de::Error::missing_field("bits"))?;
+                let lsu: Vec<u16> = lsu.ok_or_else(|| de::Error::missing_field("lsu"))?;
+                let lsu_len = lsu.len();
+
+                Ok(Decimal::<N> {
+                    digits,
+                    exponent,
+                    bits,
+                    lsu: match lsu.try_into() {
+                        Ok(lsu) => lsu,
+                        Err(_) => {
+                            return Err(de::Error::invalid_value(
+                                de::Unexpected::Other(&format!("&[u16] of length {}", lsu_len)),
+                                &format!("&[u16] of length {}", N).as_str(),
+                            ))
+                        }
+                    },
+                })
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &["digits", "exponent", "bits", "lsu"];
+        deserializer.deserialize_struct("Decimal", FIELDS, DecimalVisitor)
     }
 }
 

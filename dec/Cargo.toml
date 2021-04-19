@@ -14,11 +14,13 @@ edition = "2018"
 [dependencies]
 decnumber-sys = { version = "0.1.5", path = "../decnumber-sys" }
 libc = "0.2.82"
+serde = { version = "1.0.124", features = ["derive"] }
 static_assertions = { version = "1.1.0", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.0"
 rand = "0.7.3"
+serde_test = "1.0.117"
 
 [features]
 arbitrary-precision = ["static_assertions"]
