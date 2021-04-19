@@ -10,6 +10,10 @@ Versioning].
 * Remove the `arbitrary-precision` feature. The arbitrary-precision `Decimal`
   type is now always compiled.
 
+* Add the [`Decimal::infinity`] and [`Decimal::nan`] methods.
+
+
+
 ## 0.3.3 - 2021-03-10
 
 * Fix bug that could cause `to_standard_notation_string` to misplace the decimal
