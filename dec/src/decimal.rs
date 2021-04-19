@@ -72,6 +72,20 @@ impl<const N: usize> Decimal<N> {
         Decimal::default()
     }
 
+    /// Constructs a decimal number representing positive infinity.
+    pub fn infinity() -> Decimal<N> {
+        let mut d = Decimal::default();
+        d.bits = decnumber_sys::DECINF;
+        d
+    }
+
+    /// Constructs a decimal number representing a non-signaling NaN.
+    pub fn nan() -> Decimal<N> {
+        let mut d = Decimal::default();
+        d.bits = decnumber_sys::DECNAN;
+        d
+    }
+
     /// Computes the number of significant digits in the number.
     ///
     /// If the number is zero or infinite, returns 1. If the number is a NaN,
