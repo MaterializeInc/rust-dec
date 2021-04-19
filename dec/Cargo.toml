@@ -14,11 +14,13 @@ edition = "2018"
 [dependencies]
 decnumber-sys = { version = "0.1.5", path = "../decnumber-sys" }
 libc = "0.2.82"
+serde = { version = "1.0.124", features = ["derive"], optional = true }
 static_assertions = "1.1.0"
 
 [dev-dependencies]
 criterion = "0.3.0"
 rand = "0.7.3"
+serde_test = "1.0.117"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -27,3 +29,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [[bench]]
 name = "dec"
 harness = false
+
+[[test]]
+name = "serde"
+required-features = ["serde"]

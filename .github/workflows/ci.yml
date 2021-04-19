@@ -28,6 +28,7 @@ jobs:
     - run: cd dectest && cargo run -- -b decimal128 ../testdata/decQuad.decTest
     - run: cd dectest && cargo run -- -b decimal ../testdata/testall.decTest
     - run: cargo test
+    - run: cargo test --features=serde
 
   lint:
     name: lint
