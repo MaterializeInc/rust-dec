@@ -53,12 +53,14 @@ macro_rules! __from_int {
     }};
 }
 
+#[cfg(feature = "arbitrary-precision")]
 macro_rules! decnum_from_signed_int {
     ($t:ty, $cx:expr, $n:expr) => {
         __decnum_from_int!($t, i32, $cx, $n)
     };
 }
 
+#[cfg(feature = "arbitrary-precision")]
 macro_rules! decnum_from_unsigned_int {
     ($t:ty, $cx:expr, $n:expr) => {
         __decnum_from_int!($t, u32, $cx, $n)

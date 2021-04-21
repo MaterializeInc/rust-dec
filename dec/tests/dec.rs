@@ -22,9 +22,9 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
 
-use serde_test::{assert_tokens, Token};
-
 use dec::{Context, Decimal128, Decimal32, Decimal64, OrderedDecimal, Status};
+#[cfg(feature = "arbitrary-precision")]
+use serde_test::{assert_tokens, Token};
 
 #[derive(Default)]
 struct ValidatingHasher {
@@ -208,6 +208,7 @@ fn test_overloading() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+#[cfg(feature = "arbitrary-precision")]
 fn test_i64_to_decnum() -> Result<(), Box<dyn Error>> {
     use dec::Decimal;
     const N: usize = 12;
@@ -227,6 +228,7 @@ fn test_i64_to_decnum() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+#[cfg(feature = "arbitrary-precision")]
 fn test_u64_to_decnum() -> Result<(), Box<dyn Error>> {
     use dec::Decimal;
     const N: usize = 12;
@@ -245,6 +247,7 @@ fn test_u64_to_decnum() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+#[cfg(feature = "arbitrary-precision")]
 fn test_i128_to_decnum() -> Result<(), Box<dyn Error>> {
     use dec::Decimal;
     const N: usize = 12;
@@ -315,6 +318,7 @@ fn test_i128_to_decnum() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+#[cfg(feature = "arbitrary-precision")]
 fn test_u128_to_decnum() -> Result<(), Box<dyn Error>> {
     use dec::Decimal;
     const N: usize = 12;
