@@ -12,9 +12,6 @@ jobs:
           - build: ubuntu
             os: ubuntu-latest
             rust: stable
-          - build: ubuntu
-            os: ubuntu-latest
-            rust: nightly
           - build: macos
             os: macos-latest
             rust: stable
@@ -29,8 +26,7 @@ jobs:
     - run: cd dectest && cargo run -- -b decimal32 ../testdata/decSingle.decTest
     - run: cd dectest && cargo run -- -b decimal64 ../testdata/decDouble.decTest
     - run: cd dectest && cargo run -- -b decimal128 ../testdata/decQuad.decTest
-    - run: cd dectest && cargo run --features=arbitrary-precision -- -b decimal ../testdata/testall.decTest
-      if: ${{ matrix.rust == 'nightly' }}
+    - run: cd dectest && cargo run -- -b decimal ../testdata/testall.decTest
     - run: cargo test
 
   lint:

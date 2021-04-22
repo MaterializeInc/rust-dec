@@ -19,13 +19,11 @@ use std::fmt;
 
 use dec::{Class, Decimal128, Decimal32, Decimal64, Rounding, Status};
 
-#[cfg(feature = "arbitrary-precision")]
 mod decimal;
 mod decimal128;
 mod decimal32;
 mod decimal64;
 
-#[cfg(feature = "arbitrary-precision")]
 pub use decimal::DecimalBackend;
 pub use decimal128::Decimal128Backend;
 pub use decimal32::Decimal32Backend;
