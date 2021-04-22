@@ -19,9 +19,7 @@ use std::path::PathBuf;
 use std::process;
 
 use dectest::ast;
-#[cfg(feature = "arbitrary-precision")]
-use dectest::backend::DecimalBackend;
-use dectest::backend::{Decimal128Backend, Decimal32Backend, Decimal64Backend};
+use dectest::backend::{Decimal128Backend, Decimal32Backend, Decimal64Backend, DecimalBackend};
 use dectest::parse;
 use dectest::run::{self, Outcome, Report};
 
@@ -42,7 +40,6 @@ fn run() -> Result<(), Box<dyn Error>> {
             "-v" => verbose = true,
             "-b" => match args.next().as_deref() {
                 None => return Err("-b flag requires a value".into()),
-                #[cfg(feature = "arbitrary-precision")]
                 Some("decimal") => backend = BackendSpec::Decimal,
                 Some("decimal32") => backend = BackendSpec::Decimal32,
                 Some("decimal64") => backend = BackendSpec::Decimal64,
@@ -61,7 +58,6 @@ fn run() -> Result<(), Box<dyn Error>> {
     for path in paths {
         let file = parse::parse_file(&path)?;
         match backend {
-            #[cfg(feature = "arbitrary-precision")]
             BackendSpec::Decimal => run::run_file::<DecimalBackend, _>(&mut reporter, &file)?,
             BackendSpec::Decimal32 => run::run_file::<Decimal32Backend, _>(&mut reporter, &file)?,
             BackendSpec::Decimal64 => run::run_file::<Decimal64Backend, _>(&mut reporter, &file)?,
@@ -80,7 +76,6 @@ fn run() -> Result<(), Box<dyn Error>> {
 }
 
 enum BackendSpec {
-    #[cfg(feature = "arbitrary-precision")]
     Decimal,
     Decimal32,
     Decimal64,

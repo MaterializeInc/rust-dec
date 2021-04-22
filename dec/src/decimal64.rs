@@ -28,7 +28,6 @@ use std::str::FromStr;
 use libc::c_char;
 
 use crate::context::{Class, Context};
-#[cfg(feature = "arbitrary-precision")]
 use crate::decimal::Decimal;
 use crate::decimal128::Decimal128;
 use crate::decimal32::Decimal32;
@@ -597,7 +596,6 @@ impl Context<Decimal64> {
     ///
     /// The result may be inexact. The status fields on the context will be set
     /// appropriately if so.
-    #[cfg(feature = "arbitrary-precision")]
     pub fn from_decimal<const N: usize>(&mut self, d: &Decimal<N>) -> Decimal64 {
         let mut d64 = MaybeUninit::<decnumber_sys::decDouble>::uninit();
         let d64 = unsafe {

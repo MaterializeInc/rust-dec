@@ -63,9 +63,7 @@
 //!    various arithmetic functions.
 //!
 //!  * [`Decimal`], a decimal representation whose precision is configurable via
-//!    its generic `N` parameter. This type requires Rust's `min_const_generics`
-//!    feature, which is scheduled to stabilize in Rust 1.51.0. This type is
-//!    only available when the `arbitrary-precision` feature is activated.
+//!    its generic `N` parameter.
 //!
 //!  * [`Context`], which hosts most of the actual functions on the above types.
 //!    A context configures the behavior of the various operations (e.g.,
@@ -99,8 +97,6 @@
 mod context;
 #[macro_use]
 mod conv;
-#[cfg(feature = "arbitrary-precision")]
-#[cfg_attr(docsrs, doc(cfg(feature = "arbitrary-precision")))]
 mod decimal;
 mod decimal128;
 mod decimal32;
@@ -111,7 +107,6 @@ mod ordered;
 mod tests;
 
 pub use context::{Class, Context, Rounding, Status};
-#[cfg(feature = "arbitrary-precision")]
 pub use decimal::Decimal;
 pub use decimal128::Decimal128;
 pub use decimal32::Decimal32;

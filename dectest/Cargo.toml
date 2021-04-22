@@ -9,6 +9,3 @@ publish = false
 [dependencies]
 dec = { path = "../dec" }
 hex = "0.4.2"
-
-[features]
-arbitrary-precision = ["dec/arbitrary-precision"]

@@ -48,7 +48,6 @@ fn validate_n(n: usize) {
 /// the stack size implies a smaller maximum for `N`. Due to limitations with
 /// constant generics it is not yet possible to enforce these restrictions
 /// at compile time, so they are checked at runtime.
-#[cfg_attr(docsrs, doc(cfg(feature = "arbitrary-precision")))]
 #[repr(C)]
 #[derive(Clone)]
 pub struct Decimal<const N: usize> {
