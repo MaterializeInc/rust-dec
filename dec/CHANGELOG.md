@@ -13,6 +13,10 @@ Versioning].
 * Add the `Decimal::infinity`, `Decimal::nan`, `Decimal::rescale`, and
   `Decimal::to_standard_notation_string` methods.
 
+* Add the `Context::set)status` method.
+
+* Implement `BitAnd`, `BitAndAssign`, `BitOr`, and `BitOrAssign` for `Status`.
+
 ## 0.3.3 - 2021-03-10
 
 * Fix bug that could cause `to_standard_notation_string` to misplace the decimal

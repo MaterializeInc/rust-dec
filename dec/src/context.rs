@@ -15,6 +15,7 @@
 
 use std::fmt;
 use std::marker::PhantomData;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
 
 use libc::c_uint;
 
@@ -71,6 +72,11 @@ impl<D> Context<D> {
         Status {
             inner: self.inner.status,
         }
+    }
+
+    /// Sets the context's status.
+    pub fn set_status(&mut self, status: Status) {
+        self.inner.status = status.inner;
     }
 
     /// Clears the context's status.
@@ -355,6 +361,38 @@ impl Status {
 impl Default for Status {
     fn default() -> Self {
         Status { inner: 0 }
+    }
+}
+
+impl BitAnd for Status {
+    type Output = Status;
+
+    fn bitand(self, rhs: Status) -> Status {
+        Status {
+            inner: self.inner & rhs.inner,
+        }
+    }
+}
+
+impl BitAndAssign for Status {
+    fn bitand_assign(&mut self, rhs: Status) {
+        self.inner &= rhs.inner;
+    }
+}
+
+impl BitOr for Status {
+    type Output = Status;
+
+    fn bitor(self, rhs: Status) -> Status {
+        Status {
+            inner: self.inner | rhs.inner,
+        }
+    }
+}
+
+impl BitOrAssign for Status {
+    fn bitor_assign(&mut self, rhs: Status) {
+        self.inner |= rhs.inner;
     }
 }
 
