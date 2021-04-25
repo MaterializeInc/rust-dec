@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::convert::TryFrom;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter::{Product, Sum};
@@ -212,7 +213,9 @@ impl<const N: usize> Hash for OrderedDecimal<Decimal<N>> {
         d.digits.hash(state);
         d.exponent.hash(state);
         d.bits.hash(state);
-        d.lsu.hash(state);
+        // Each element of lsu is a BCD (i.e. 3 digits wide)
+        let lsu_idx = usize::try_from(d.digits()).unwrap() / 3;
+        d.lsu[0..lsu_idx + 1].hash(state);
     }
 }
 

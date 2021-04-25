@@ -51,6 +51,7 @@ where
 const ORDERING_TESTS: &[(&str, &str, Ordering)] = &[
     ("1.2", "1.2", Ordering::Equal),
     ("1.2", "1.200", Ordering::Equal),
+    ("1.2", "1.2000000000000000000000", Ordering::Equal),
     ("1", "2", Ordering::Less),
     ("2", "1", Ordering::Greater),
     ("1", "NaN", Ordering::Less),
@@ -110,7 +111,7 @@ fn test_ordered_decimal() -> Result<(), Box<dyn Error>> {
         if lhs == rhs && hash_data(&lhs) != hash_data(&rhs) {
             panic!("{} and {} are equal but hashes are not equal", lhs, rhs);
         } else if lhs != rhs && hash_data(&lhs) == hash_data(&rhs) {
-            panic!("{} and {} are equal but hashes are equal", lhs, rhs);
+            panic!("{} and {} are not equal but hashes are equal", lhs, rhs);
         }
     }
     Ok(())
