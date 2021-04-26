@@ -51,7 +51,7 @@ fn validate_n(n: usize) {
 /// constant generics it is not yet possible to enforce these restrictions
 /// at compile time, so they are checked at runtime.
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Decimal<const N: usize> {
     pub(crate) digits: u32,
