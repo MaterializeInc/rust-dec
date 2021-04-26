@@ -1289,3 +1289,162 @@ fn test_to_width_decimal() {
         ],
     );
 }
+
+#[test]
+/// Aggregate a set of valid values with width `N` into width `M`, and then go
+/// back to `N`-width. This test is bespoke for Materialize's needs when
+/// aggregating values using library.
+fn test_agg_wide_narrow_decnum() {
+    const N: usize = 12;
+    const M: usize = N + 1;
+    fn inner(
+        v: &[&str],
+        e_m: &str,
+        statuses_m: &[fn(&mut Status)],
+        e_n: &str,
+        statuses_n: &[fn(&mut Status)],
+    ) {
+        let mut cx_n = Context::<dec::Decimal<N>>::default();
+        // 35 max exp == 36 digits max
+        cx_n.set_max_exponent(N as isize * 3 - 1).unwrap();
+        let mut cx_m = Context::<dec::Decimal<M>>::default();
+        // 36 max exp == 37 digits max
+        cx_m.set_max_exponent(M as isize * 3 - 3).unwrap();
+
+        // Parse values as `N`, but then convert to `M` and aggregate.
+        let s = v
+            .iter()
+            .map(|v| {
+                let v_n = cx_n.parse(*v).unwrap();
+                cx_m.to_width(v_n)
+            })
+            .collect::<Vec<_>>();
+
+        // Aggregate.
+        let sum_m = cx_m.sum(s.iter());
+        assert_eq!(sum_m.to_string(), e_m);
+
+        let mut status = Status::default();
+        for set_status in statuses_m {
+            set_status(&mut status);
+        }
+        assert_eq!(cx_m.status(), status);
+
+        // Go back to `N`.
+        let sum_n = cx_n.to_width(sum_m.clone());
+
+        assert_eq!(sum_n.to_string(), e_n);
+
+        let mut status = Status::default();
+        for set_status in statuses_n {
+            set_status(&mut status);
+        }
+        assert_eq!(cx_n.status(), status);
+    }
+    // Vanilla aggregation
+    inner(
+        &["9876543210", "123456789"],
+        "9999999999",
+        &[],
+        "9999999999",
+        &[],
+    );
+    // Ensure intermediate value exceeds `N`.
+    inner(
+        &[
+            "987654321012345678901234567890123456",
+            "987654321012345678901234567890123456",
+        ],
+        "1975308642024691357802469135780246912",
+        &[],
+        "Infinity",
+        &[
+            Status::set_inexact,
+            Status::set_overflow,
+            Status::set_rounded,
+        ],
+    );
+    inner(
+        &["9e35", "9e35"],
+        "1800000000000000000000000000000000000",
+        &[],
+        "Infinity",
+        &[
+            Status::set_inexact,
+            Status::set_overflow,
+            Status::set_rounded,
+        ],
+    );
+    // Ensure intermediate value exceeds `N`, negative.
+    inner(
+        &[
+            "-987654321012345678901234567890123456",
+            "-987654321012345678901234567890123456",
+        ],
+        "-1975308642024691357802469135780246912",
+        &[],
+        "-Infinity",
+        &[
+            Status::set_inexact,
+            Status::set_overflow,
+            Status::set_rounded,
+        ],
+    );
+    // Test infinities
+    inner(&["Infinity", "Infinity"], "Infinity", &[], "Infinity", &[]);
+    inner(
+        &["-Infinity", "Infinity"],
+        "NaN",
+        &[Status::set_invalid_operation],
+        "NaN",
+        &[],
+    );
+    // Span agg width OK
+    inner(
+        &["9e35", "9e-3"],
+        "900000000000000000000000000000000000.009",
+        &[],
+        "900000000000000000000000000000000000",
+        &[Status::set_inexact, Status::set_rounded],
+    );
+    // Exceed `M`'s width the hard way
+    inner(
+        &[
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35", "9e35",
+            "9e35", "9e35", "9e35", "9e35",
+        ],
+        "Infinity",
+        &[
+            Status::set_inexact,
+            Status::set_overflow,
+            Status::set_rounded,
+        ],
+        "Infinity",
+        // Because the wide value is infinity, the narrow value is, as well, but
+        // it isn't intrinsically aware of the aggregate's inexactitude, meaning
+        // its context does not propagate the status.
+        &[],
+    );
+    // Exceed `M`'s width the easy way
+    inner(
+        &["9e35", "9e35", "9e-3"],
+        "1800000000000000000000000000000000000.01",
+        &[Status::set_inexact, Status::set_rounded],
+        "Infinity",
+        &[
+            Status::set_inexact,
+            Status::set_overflow,
+            Status::set_rounded,
+        ],
+    );
+}
