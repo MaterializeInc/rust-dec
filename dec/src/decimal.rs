@@ -163,6 +163,11 @@ impl<const N: usize> Decimal<N> {
         self.exponent
     }
 
+    /// Sets `self`'s exponent to the provided value.
+    pub fn set_exponent(&mut self, exponent: i32) {
+        self.exponent = exponent;
+    }
+
     /// Reports whether the number is finite.
     ///
     /// A finite number is one that is neither infinite nor a NaN.
