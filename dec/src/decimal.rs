@@ -906,6 +906,17 @@ impl<const N: usize> Context<Decimal<N>> {
         }
     }
 
+    /// Takes product of elements in `iter`.
+    pub fn product<'a, I>(&mut self, iter: I) -> Decimal<N>
+    where
+        I: Iterator<Item = &'a Decimal<N>>,
+    {
+        iter.fold(Decimal::<N>::from(1), |mut product, d| {
+            self.mul(&mut product, &d);
+            product
+        })
+    }
+
     /// Rounds or pads `lhs` so that it has the same exponent as `rhs`, storing
     /// the result in `lhs`.
     pub fn quantize(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<N>) {
@@ -1024,6 +1035,17 @@ impl<const N: usize> Context<Decimal<N>> {
                 &mut self.inner,
             );
         }
+    }
+
+    /// Sums all elements of `iter`.
+    pub fn sum<'a, I>(&mut self, iter: I) -> Decimal<N>
+    where
+        I: Iterator<Item = &'a Decimal<N>>,
+    {
+        iter.fold(Decimal::<N>::zero(), |mut sum, d| {
+            self.add(&mut sum, d);
+            sum
+        })
     }
 
     /// Determines the ordering of `lhs` relative to `rhs`, using the
