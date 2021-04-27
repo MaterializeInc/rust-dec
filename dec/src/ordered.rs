@@ -23,6 +23,9 @@ use std::ops::{
 };
 use std::str::FromStr;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use crate::context::Context;
 use crate::decimal::Decimal;
 use crate::decimal128::Decimal128;
@@ -52,6 +55,7 @@ use crate::error::ParseDecimalError;
 /// [`OrderedFloat`]: https://docs.rs/ordered-float/2.0.1/ordered_float/struct.OrderedFloat.html
 /// [`ordered_float`]: https://crates.io/crates/ordered-float
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct OrderedDecimal<D>(pub D);
 
 impl<D> OrderedDecimal<D> {
