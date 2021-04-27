@@ -19,6 +19,7 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
+use std::ops::Neg;
 use std::str::FromStr;
 
 use libc::c_char;
@@ -442,6 +443,20 @@ impl<const N: usize> From<Decimal128> for Decimal<N> {
     }
 }
 
+impl<const N: usize> Neg for Decimal<N> {
+    type Output = Decimal<N>;
+
+    /// Note that this clones `self` to generate the negative value. For a
+    /// non-allocating method, use `Context::<N>::neg`.
+    fn neg(self) -> Decimal<N> {
+        let mut n = self.clone();
+        unsafe {
+            decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
+        }
+        n
+    }
+}
+
 impl<const N: usize> Default for Context<Decimal<N>> {
     fn default() -> Context<Decimal<N>> {
         let mut ctx = MaybeUninit::<decnumber_sys::decContext>::uninit();
@@ -811,6 +826,14 @@ impl<const N: usize> Context<Decimal<N>> {
                 rhs.as_ptr(),
                 &mut self.inner,
             );
+        }
+    }
+
+    /// Negates the sign of `n`, storing the result in `n`. Note that unlike
+    /// `minus`, no exception or error can occur.
+    pub fn neg(&mut self, n: &mut Decimal<N>) {
+        unsafe {
+            decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
         }
     }
 
