@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -1447,4 +1448,199 @@ fn test_agg_wide_narrow_decnum() {
             Status::set_rounded,
         ],
     );
+}
+
+#[test]
+fn test_cx_into_i64() {
+    fn inner(v: i64) {
+        let mut cx = Context::<Decimal<13>>::default();
+        let d = Decimal::<13>::from(v);
+        assert_eq!(Ok(v), cx.try_into_i64(d));
+    }
+
+    inner(0);
+    inner(1);
+    inner(i64::MIN);
+    inner(i64::MAX);
+    inner(i64::MIN / 3);
+    inner(i64::MAX / 3);
+    inner(i64::MIN / 7);
+    inner(i64::MAX / 7);
+}
+
+#[test]
+fn test_cx_into_u64() {
+    fn inner(v: u64) {
+        let mut cx = Context::<Decimal<13>>::default();
+        let d = Decimal::<13>::from(v);
+        assert_eq!(Ok(v), cx.try_into_u64(d));
+    }
+    inner(u64::MIN);
+    inner(u64::MAX);
+    inner(u64::MAX / 3);
+    inner(u64::MAX / 7);
+}
+
+#[test]
+fn test_cx_into_i128() {
+    fn inner(v: i128) {
+        let mut cx = Context::<Decimal<13>>::default();
+        let d = cx.from_i128(v);
+        assert_eq!(Ok(v), cx.try_into_i128(d));
+    }
+    inner(i128::MIN);
+    inner(i128::MAX);
+    inner(i128::MIN / 3);
+    inner(i128::MAX / 3);
+    inner(i128::MIN / 7);
+    inner(i128::MAX / 7);
+}
+
+#[test]
+fn test_cx_into_u128() {
+    fn inner(v: u128) {
+        let mut cx = Context::<Decimal<13>>::default();
+        let d = cx.from_u128(v);
+        assert_eq!(Ok(v), cx.try_into_u128(d));
+    }
+
+    inner(u128::MIN / 3);
+    inner(u128::MAX / 3);
+    inner(u128::MIN / 7);
+    inner(u128::MAX / 7);
+}
+
+#[test]
+fn test_decnum_tryinto_primitive() {
+    const WIDTH: usize = 14;
+    let mut cx = Context::<Decimal<WIDTH>>::default();
+    let min_u32 = Decimal::<WIDTH>::from(u32::MIN);
+    let max_u32 = Decimal::<WIDTH>::from(u32::MAX);
+    let min_i32 = Decimal::<WIDTH>::from(i32::MIN);
+    let max_i32 = Decimal::<WIDTH>::from(i32::MAX);
+    let min_u64 = Decimal::<WIDTH>::from(u64::MIN);
+    let max_u64 = Decimal::<WIDTH>::from(u64::MAX);
+    let min_i64 = Decimal::<WIDTH>::from(i64::MIN);
+    let max_i64 = Decimal::<WIDTH>::from(i64::MAX);
+    let min_u128 = cx.from_u128(u128::MIN);
+    let max_u128 = cx.from_u128(u128::MAX);
+    let min_i128 = cx.from_i128(i128::MIN);
+    let max_i128 = cx.from_i128(i128::MAX);
+
+    let inner = |v: &Decimal<WIDTH>| {
+        let i_u32 = u32::try_from(*v);
+        let i_i32 = i32::try_from(*v);
+        let i_u64 = u64::try_from(*v);
+        let i_i64 = i64::try_from(*v);
+        let i_u128 = u128::try_from(*v);
+        let i_i128 = i128::try_from(*v);
+
+        // u32
+        if v >= &min_u32 && v <= &max_u32 {
+            assert!(i_u32.is_ok());
+        } else {
+            assert!(i_u32.is_err());
+        }
+
+        // i32
+        if v >= &min_i32 && v <= &max_i32 {
+            assert!(i_i32.is_ok());
+        } else {
+            assert!(i_i32.is_err());
+        }
+
+        // u64
+        if v >= &min_u64 && v <= &max_u64 {
+            assert!(i_u64.is_ok());
+        } else {
+            assert!(i_u64.is_err());
+        }
+
+        // i64
+        if v >= &min_i64 && v <= &max_i64 {
+            assert!(i_i64.is_ok());
+        } else {
+            assert!(i_i64.is_err());
+        }
+
+        // u128
+        if v >= &min_u128 && v <= &max_u128 {
+            assert!(i_u128.is_ok());
+        } else {
+            assert!(i_u128.is_err());
+        }
+
+        // i128
+        if v >= &min_i128 && v <= &max_i128 {
+            assert!(i_i128.is_ok());
+        } else {
+            assert!(i_i128.is_err());
+        }
+    };
+
+    inner(&min_u32);
+    inner(&max_u32);
+    inner(&min_i32);
+    inner(&max_i32);
+    inner(&min_u64);
+    inner(&max_u64);
+    inner(&min_i64);
+    inner(&max_i64);
+    inner(&min_u128);
+    inner(&max_u128);
+    inner(&min_i128);
+    inner(&max_i128);
+
+    fn inner_expect_failure(s: &str) {
+        let mut cx = Context::<Decimal<WIDTH>>::default();
+        let v = cx.parse(s).unwrap();
+        assert!(u32::try_from(v).is_err());
+        assert!(i32::try_from(v).is_err());
+        assert!(u64::try_from(v).is_err());
+        assert!(i64::try_from(v).is_err());
+        assert!(u128::try_from(v).is_err());
+        assert!(i128::try_from(v).is_err());
+    }
+
+    inner_expect_failure("1.2");
+    inner_expect_failure("-1.2");
+    inner_expect_failure("1E-2");
+    inner_expect_failure("-1E-2");
+    inner_expect_failure("2E10");
+    inner_expect_failure("2E-10");
+    inner_expect_failure("9E40");
+    inner_expect_failure("Infinity");
+    inner_expect_failure("-Infinity");
+    inner_expect_failure("NaN");
+
+    /// Values with non-zero exponents cannot be converted to primitive ints,
+    /// but quantizing the values to an exponent of 0 can convert them to valid
+    /// integer representations.
+    fn quantizable(s: i32, e: i32, valid: bool) {
+        let mut cx = Context::<Decimal<WIDTH>>::default();
+        let mut v = Decimal::<WIDTH>::from(s);
+        v.set_exponent(e);
+        assert!(u32::try_from(v).is_err());
+        assert!(i32::try_from(v).is_err());
+        assert!(u64::try_from(v).is_err());
+        assert!(i64::try_from(v).is_err());
+        assert!(u128::try_from(v).is_err());
+        assert!(i128::try_from(v).is_err());
+        cx.quantize(&mut v, &Decimal::<WIDTH>::zero());
+        if valid {
+            assert!(u32::try_from(v).is_ok());
+            assert!(i32::try_from(v).is_ok());
+            assert!(u64::try_from(v).is_ok());
+            assert!(i64::try_from(v).is_ok());
+            assert!(u128::try_from(v).is_ok());
+            assert!(i128::try_from(v).is_ok());
+        } else {
+            assert!(cx.status().invalid_operation());
+        }
+    }
+
+    quantizable(0, 2, true);
+    quantizable(1, 2, true);
+    quantizable(1, 43, false);
+    quantizable(9999, 99999999, false);
 }
