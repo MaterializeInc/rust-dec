@@ -52,3 +52,21 @@ impl fmt::Display for InvalidExponentError {
 }
 
 impl Error for InvalidExponentError {}
+
+/// An error indicating that a value cannot be cast to a primitive type.
+///
+/// Causes for this failure include calling cast functions on values:
+/// - Representing infinity or NaN
+/// - With non-zero exponent values
+/// - Whose coefficient doesn't fit into the target, e.g. values that require
+///   too many digits of precision.
+#[derive(Debug, Eq, PartialEq)]
+pub struct TryFromDecimalError;
+
+impl fmt::Display for TryFromDecimalError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("decimal cannot be expressed in target primitive type")
+    }
+}
+
+impl Error for TryFromDecimalError {}

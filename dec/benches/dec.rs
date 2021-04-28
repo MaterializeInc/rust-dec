@@ -13,10 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::convert::TryFrom;
+
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use rand::{thread_rng, Rng};
 
-use dec::{Context, Decimal128, Decimal64};
+use dec::{Context, Decimal, Decimal128, Decimal64};
 
 fn bench_decode_decimal64(d: Decimal64, b: &mut Bencher) {
     b.iter_with_setup(|| d.clone(), |d| (d.exponent(), d.coefficient()))
@@ -95,5 +97,33 @@ pub fn bench_print(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_decode, bench_print);
+pub fn bench_try_into_primitive(d: Decimal<13>, b: &mut Bencher) {
+    b.iter_with_setup(
+        || {
+            [-1, 0, 1]
+                .iter()
+                .map(|exp| {
+                    let mut d = d.clone();
+                    d.set_exponent(*exp);
+                    d
+                })
+                .collect::<Vec<_>>()
+        },
+        |v| {
+            for d in v {
+                let _ = i128::try_from(d);
+            }
+        },
+    )
+}
+
+pub fn bench_tryinto_primitive(c: &mut Criterion) {
+    let mut rng = thread_rng();
+    let d: Decimal<13> = i32::into(rng.gen());
+    c.bench_function("bench_try_into_primitive", |b| {
+        bench_try_into_primitive(d.clone(), b)
+    });
+}
+
+criterion_group!(benches, bench_decode, bench_print, bench_tryinto_primitive);
 criterion_main!(benches);

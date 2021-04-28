@@ -30,7 +30,9 @@ use crate::context::{Class, Context};
 use crate::decimal128::Decimal128;
 use crate::decimal32::Decimal32;
 use crate::decimal64::Decimal64;
-use crate::error::{InvalidExponentError, InvalidPrecisionError, ParseDecimalError};
+use crate::error::{
+    InvalidExponentError, InvalidPrecisionError, ParseDecimalError, TryFromDecimalError,
+};
 
 fn validate_n(n: usize) {
     // TODO(benesch): check this at compile time, when that becomes possible.
@@ -157,6 +159,23 @@ impl<const N: usize> Decimal<N> {
             decnumber_sys::decNumberGetBCD(self.as_ptr(), buf.as_mut_ptr() as *mut u8);
         };
         buf
+    }
+
+    /// Returns the digits of the coefficient in [`decNumberUnit`][dnu] format,
+    /// which is a vector of `u16`, with element number representing
+    /// [`decnumber_sys::DECDPUN`] digits of the coefficient.
+    ///
+    /// The result is ordered with the least significant digits at index 0.
+    ///
+    /// [dpd]: http://speleotrove.com/decimal/dnnumb.html
+    fn coefficient_units(&self) -> &[u16] {
+        // The number of units is the number of digits /
+        // `decnumber_sys::DECDPUN`, with an additional unit if there is any
+        // remainder of the division. The simplest means of "rounding up" is to
+        // add `decnumber_sys::DECDPUN - 1`.
+        let units_len = (usize::try_from(self.digits()).unwrap() + decnumber_sys::DECDPUN - 1)
+            / decnumber_sys::DECDPUN;
+        &self.lsu[0..units_len]
     }
 
     /// Computes the exponent of the number.
@@ -345,6 +364,139 @@ impl<const N: usize> From<i32> for Decimal<N> {
             decnumber_sys::decNumberFromInt32(d.as_mut_ptr() as *mut decnumber_sys::decNumber, n);
         }
         d
+    }
+}
+
+/// Implements `std::convert::TryInto` semantics for `Decimal<N>` (represented
+/// by `$d`) into primitive integers (`$p`).
+macro_rules! __decnum_tryinto_primitive {
+    ($p:ty, $cx:expr, $max_digits:literal, $d:expr, $allow_neg:expr) => {{
+        let mut fail = || -> TryFromDecimalError {
+            let mut s = $cx.status();
+            s.set_invalid_operation();
+            $cx.set_status(s);
+            TryFromDecimalError
+        };
+
+        if $d.is_special()
+            || $d.digits() > $max_digits
+            || $d.exponent() != 0
+            || (!$allow_neg && $d.is_negative())
+        {
+            return Err(fail());
+        }
+
+        let accum_op = if $d.is_negative() {
+            <$p>::checked_sub
+        } else {
+            <$p>::checked_add
+        };
+        let ten: $p = 10;
+        let mut ten_pow = 0;
+
+        let mut accum = 0;
+        // try-catch
+        || -> Option<$p> {
+            for v in $d.coefficient_units() {
+                let d = <$p>::from(*v).checked_mul(ten.pow(ten_pow))?;
+                accum = accum_op(accum, d)?;
+                ten_pow += decnumber_sys::DECDPUN as u32;
+            }
+            Some(accum)
+        }()
+        .ok_or_else(|| fail())
+    }};
+}
+
+macro_rules! decnum_tryinto_primitive_int {
+    ($p:ty, $cx:expr, $max_digits:literal, $d:expr) => {{
+        __decnum_tryinto_primitive!($p, $cx, $max_digits, $d, true)
+    }};
+}
+
+macro_rules! decnum_tryinto_primitive_uint {
+    ($p:ty, $cx:expr, $max_digits:literal, $d:expr) => {{
+        __decnum_tryinto_primitive!($p, $cx, $max_digits, $d, false)
+    }};
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for i32 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<i32, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_i32(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for u32 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<u32, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_u32(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for i64 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<i64, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_i64(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for u64 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<u64, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_u64(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for i128 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<i128, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_i128(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for u128 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<u128, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_u128(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for usize {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<usize, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_usize(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for isize {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<isize, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_isize(n)
     }
 }
 
@@ -722,6 +874,111 @@ impl<const N: usize> Context<Decimal<N>> {
     /// ```
     pub fn from_u128(&mut self, n: u128) -> Decimal<N> {
         decimal_from_unsigned_int!(self, n)
+    }
+
+    /// Attempts to convert `d` to `i32` or fails if not possible. Note that
+    /// when returning an error, `self`'s [`context::Status`] is set to
+    /// `invalid_operation`.
+    ///
+    /// Note that this function:
+    /// - Errors if `self.status()` is set to `invalid_operation` irrespective
+    ///   of whether or not this specific invocation of the function set that
+    ///   status.
+    /// - Fails for values that are representable as integers but whose
+    ///   exponents are > 0. Consider calling `Context::quantize` to set the
+    ///   exponent to 0 before calling this function.
+    pub fn try_into_i32(&mut self, d: Decimal<N>) -> Result<i32, TryFromDecimalError> {
+        let i = unsafe { decnumber_sys::decNumberToInt32(d.as_ptr(), &mut self.inner) };
+        if self.status().invalid_operation() {
+            Err(TryFromDecimalError)
+        } else {
+            Ok(i)
+        }
+    }
+
+    /// Attempts to convert `d` to `u32` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_u32(&mut self, d: Decimal<N>) -> Result<u32, TryFromDecimalError> {
+        let i = unsafe { decnumber_sys::decNumberToUInt32(d.as_ptr(), &mut self.inner) };
+        if self.status().invalid_operation() {
+            Err(TryFromDecimalError)
+        } else {
+            Ok(i)
+        }
+    }
+
+    /// Attempts to convert `d` to `isize` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    #[cfg(target_pointer_width = "32")]
+    pub fn try_into_isize(&mut self, d: Decimal<N>) -> Result<isize, TryFromDecimalError> {
+        let d = self.try_into_i32(n)?;
+        Ok(d as isize)
+    }
+
+    /// Attempts to convert `d` to `isize` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    #[cfg(target_pointer_width = "64")]
+    pub fn try_into_isize(&mut self, d: Decimal<N>) -> Result<isize, TryFromDecimalError> {
+        let d = self.try_into_i64(d)?;
+        Ok(d as isize)
+    }
+
+    /// Attempts to convert `d` to `i64` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_i64(&mut self, d: Decimal<N>) -> Result<i64, TryFromDecimalError> {
+        decnum_tryinto_primitive_int!(i64, self, 19, d)
+    }
+
+    /// Attempts to convert `d` to `i128` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_i128(&mut self, d: Decimal<N>) -> Result<i128, TryFromDecimalError> {
+        decnum_tryinto_primitive_int!(i128, self, 39, d)
+    }
+
+    /// Attempts to convert `d` to `usize` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    #[cfg(target_pointer_width = "32")]
+    pub fn try_into_usize(&mut self, d: Decimal<N>) -> Result<usize, TryFromDecimalError> {
+        let d = self.try_into_u32(n)?;
+        Ok(d as usize)
+    }
+
+    /// Attempts to convert `d` to `usize` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    #[cfg(target_pointer_width = "64")]
+    pub fn try_into_usize(&mut self, d: Decimal<N>) -> Result<usize, TryFromDecimalError> {
+        let d = self.try_into_u64(d)?;
+        Ok(d as usize)
+    }
+
+    /// Attempts to convert `d` to `u64` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_u64(&mut self, d: Decimal<N>) -> Result<u64, TryFromDecimalError> {
+        decnum_tryinto_primitive_uint!(u64, self, 20, d)
+    }
+
+    /// Attempts to convert `d` to `u128` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_u128(&mut self, d: Decimal<N>) -> Result<u128, TryFromDecimalError> {
+        decnum_tryinto_primitive_uint!(u128, self, 39, d)
     }
 
     /// Computes the digitwise logical inversion of `n`, storing the result in
