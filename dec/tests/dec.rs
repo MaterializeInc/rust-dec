@@ -1644,3 +1644,86 @@ fn test_decnum_tryinto_primitive() {
     quantizable(1, 43, false);
     quantizable(9999, 99999999, false);
 }
+
+#[test]
+fn test_decnum_coefficient() {
+    const WIDTH: usize = 14;
+    let mut cx = Context::<Decimal<WIDTH>>::default();
+    let min_u32 = Decimal::<WIDTH>::from(u32::MIN);
+    let max_u32 = Decimal::<WIDTH>::from(u32::MAX);
+    let min_i32 = Decimal::<WIDTH>::from(i32::MIN);
+    let max_i32 = Decimal::<WIDTH>::from(i32::MAX);
+    let min_u64 = Decimal::<WIDTH>::from(u64::MIN);
+    let max_u64 = Decimal::<WIDTH>::from(u64::MAX);
+    let min_i64 = Decimal::<WIDTH>::from(i64::MIN);
+    let max_i64 = Decimal::<WIDTH>::from(i64::MAX);
+    let min_u128 = cx.from_u128(u128::MIN);
+    let max_u128 = cx.from_u128(u128::MAX);
+    let min_i128 = cx.from_i128(i128::MIN);
+    let max_i128 = cx.from_i128(i128::MAX);
+
+    let inner = |v: &Decimal<WIDTH>| {
+        let mut v = v.clone();
+        let i_u32 = v.coefficient::<u32>();
+        let i_i32 = v.coefficient::<i32>();
+        let i_u64 = v.coefficient::<u64>();
+        let i_i64 = v.coefficient::<i64>();
+        let i_u128 = v.coefficient::<u128>();
+        let i_i128 = v.coefficient::<i128>();
+
+        // u32
+        if v >= min_u32 && v <= max_u32 && !v.is_negative() {
+            assert!(i_u32.is_ok());
+        } else {
+            assert!(i_u32.is_err());
+        }
+
+        // i32
+        if v >= min_i32 && v <= max_i32 {
+            assert!(i_i32.is_ok());
+        } else {
+            assert!(i_i32.is_err());
+        }
+
+        // u64
+        if v >= min_u64 && v <= max_u64 && !v.is_negative() {
+            assert!(i_u64.is_ok());
+        } else {
+            assert!(i_u64.is_err());
+        }
+
+        // i64
+        if v >= min_i64 && v <= max_i64 {
+            assert!(i_i64.is_ok());
+        } else {
+            assert!(i_i64.is_err());
+        }
+
+        // u128
+        if v >= min_u128 && v <= max_u128 && !v.is_negative() {
+            assert!(i_u128.is_ok());
+        } else {
+            assert!(i_u128.is_err());
+        }
+
+        // i128
+        if v >= min_i128 && v <= max_i128 {
+            assert!(i_i128.is_ok());
+        } else {
+            assert!(i_i128.is_err());
+        }
+    };
+
+    inner(&min_u32);
+    inner(&max_u32);
+    inner(&min_i32);
+    inner(&max_i32);
+    inner(&min_u64);
+    inner(&max_u64);
+    inner(&min_i64);
+    inner(&max_i64);
+    inner(&min_u128);
+    inner(&max_u128);
+    inner(&min_i128);
+    inner(&max_i128);
+}
