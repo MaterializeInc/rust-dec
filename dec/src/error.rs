@@ -70,3 +70,16 @@ impl fmt::Display for TryFromDecimalError {
 }
 
 impl Error for TryFromDecimalError {}
+
+/// An error indicating that a value's coefficient cannot be cast to a primitive
+/// type.
+#[derive(Debug, Eq, PartialEq)]
+pub struct InvalidCoefficientError;
+
+impl fmt::Display for InvalidCoefficientError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("decimal's coefficient cannot be expressed in target primitive type")
+    }
+}
+
+impl Error for InvalidCoefficientError {}

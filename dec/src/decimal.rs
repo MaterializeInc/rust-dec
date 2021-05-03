@@ -31,7 +31,8 @@ use crate::decimal128::Decimal128;
 use crate::decimal32::Decimal32;
 use crate::decimal64::Decimal64;
 use crate::error::{
-    InvalidExponentError, InvalidPrecisionError, ParseDecimalError, TryFromDecimalError,
+    InvalidCoefficientError, InvalidExponentError, InvalidPrecisionError, ParseDecimalError,
+    TryFromDecimalError,
 };
 
 fn validate_n(n: usize) {
@@ -176,6 +177,27 @@ impl<const N: usize> Decimal<N> {
         let units_len = (usize::try_from(self.digits()).unwrap() + decnumber_sys::DECDPUN - 1)
             / decnumber_sys::DECDPUN;
         &self.lsu[0..units_len]
+    }
+
+    /// Returns the value's coefficient as `T` or errors if not possible.
+    ///
+    /// All primitive ints are valid for `T`.
+    pub fn coefficient<T>(&mut self) -> Result<T, InvalidCoefficientError>
+    where
+        T: TryFrom<Decimal<N>>,
+    {
+        // Save current exponent to avoid an allocation.
+        let cur_exp = self.exponent();
+        // Temporarily set exponent to 0 to make convertible to primitive int
+        // `T`.
+        self.set_exponent(0);
+        let coefficient = <T>::try_from(*self);
+        // Revert the exponent to its previous value.
+        self.set_exponent(cur_exp);
+        match coefficient {
+            Ok(d) => Ok(d),
+            Err(_) => Err(InvalidCoefficientError),
+        }
     }
 
     /// Computes the exponent of the number.
