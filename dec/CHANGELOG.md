@@ -7,6 +7,9 @@ Versioning].
 
 ## Unreleased
 
+* Fix a bug that caused all `to_standard_notation_string` implementations to
+  hang on non-finite values, e.g. `NaN`.
+
 * Remove the `arbitrary-precision` feature. The arbitrary-precision `Decimal`
   type is now always compiled.
 

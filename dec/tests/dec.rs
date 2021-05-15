@@ -884,6 +884,16 @@ fn test_standard_notation_dec_64() {
             ),
         ],
     );
+
+    fn special_value_inner(s: &str, f: fn(&Decimal64) -> bool) {
+        let mut cx = Context::<Decimal64>::default();
+        let d = cx.parse(s).unwrap();
+        assert_eq!(d.to_string(), d.to_standard_notation_string());
+        assert!(f(&d));
+    }
+    special_value_inner("NaN", Decimal64::is_nan);
+    special_value_inner("Infinity", Decimal64::is_infinite);
+    special_value_inner("-Infinity", Decimal64::is_infinite);
 }
 
 #[test]
@@ -993,6 +1003,16 @@ fn test_standard_notation_dec_128() {
             ),
         ],
     );
+
+    fn special_value_inner(s: &str, f: fn(&Decimal128) -> bool) {
+        let mut cx = Context::<Decimal128>::default();
+        let d = cx.parse(s).unwrap();
+        assert_eq!(d.to_string(), d.to_standard_notation_string());
+        assert!(f(&d));
+    }
+    special_value_inner("NaN", Decimal128::is_nan);
+    special_value_inner("Infinity", Decimal128::is_infinite);
+    special_value_inner("-Infinity", Decimal128::is_infinite);
 }
 
 #[test]
@@ -1025,6 +1045,16 @@ fn test_standard_notation_decimal() {
         "0.826207295410418473995125376957078531",
         r.to_standard_notation_string()
     );
+
+    fn special_value_inner(s: &str, f: fn(&Decimal<N>) -> bool) {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.parse(s).unwrap();
+        assert_eq!(d.to_string(), d.to_standard_notation_string());
+        assert!(f(&d));
+    }
+    special_value_inner("NaN", Decimal::<N>::is_nan);
+    special_value_inner("Infinity", Decimal::<N>::is_infinite);
+    special_value_inner("-Infinity", Decimal::<N>::is_infinite);
 }
 
 #[test]

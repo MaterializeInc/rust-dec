@@ -89,6 +89,9 @@ macro_rules! __decimal_from_int {
 /// Converts from some decimal into a string in standard notation.
 macro_rules! to_standard_notation_string {
     ($d:expr) => {{
+        if !$d.is_finite() {
+            return $d.to_string();
+        }
         let digits = $d.coefficient_digits();
         let digits = {
             let i = digits
