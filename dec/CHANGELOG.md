@@ -5,28 +5,43 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## Unreleased
+## 0.4.0 - 2021-05-20
 
-* Fix a bug that caused all `to_standard_notation_string` implementations to
-  hang on non-finite values, e.g. `NaN`.
+* Add the following methods:
 
-* Remove the `arbitrary-precision` feature. The arbitrary-precision `Decimal`
-  type is now always compiled.
+  - `Decimal::infinity`
+  - `Decimal::nan`
+  - `Decimal::rescale`
+  - `Decimal::to_standard_notation_string`
+  - `Decimal::set_exponent`
+  - `Decimal::to_width` to support casting between different widths of `Decimal`.
+  - `Decimal::coefficient<T>...where T: TryFrom<Decimal<N>>` to return
+    `Decimal`'s coefficients as arbitrary primitive integers.
+  - `Context::<Decimal<N>>::sum`
+  - `Context::<Decimal<N>>::product`
+  - `Context::set_status`
 
-* Add the `Decimal::infinity`, `Decimal::nan`, `Decimal::rescale`, and
-  `Decimal::to_standard_notation_string` methods.
+* Implement `TryInto<Decimal<N>>` for all primitive integers.
 
 * Implement `From<u32>`, `From<u64>`, `From<i32>`, `From<i64>`, `From<usize>`,
   `From<isize>`, `PartialOrd` and `PartialEq` for `Decimal`.
 
-* Enable using `OrderedDecimal` with the `Decimal` type.
+* Support negating `Decimal` values.
 
-* Add the `Context::set_status` method.
+* Derive the `Copy` trait for `Decimal`.
+
+* Remove the `arbitrary-precision` feature. The arbitrary-precision `Decimal`
+  type is now always compiled.
+
+* Enable using `OrderedDecimal` with the `Decimal` type.
 
 * Implement `BitAnd`, `BitAndAssign`, `BitOr`, and `BitOrAssign` for `Status`.
 
 * Implement `serde::Serialize` and `serde::Deserialize` for `Decimal` when the
   `serde` feature is activated.
+
+* Fix a bug that caused all `to_standard_notation_string` implementations to
+  hang on non-finite values, e.g. `NaN`.
 
 ## 0.3.3 - 2021-03-10
 
