@@ -223,11 +223,11 @@ impl Decimal128 {
     ///
     /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
     pub fn coefficient_digits(&self) -> [u8; decnumber_sys::DECQUAD_Pmax] {
-        let mut buf = MaybeUninit::<[u8; decnumber_sys::DECQUAD_Pmax]>::uninit();
+        let mut buf = [0u8; decnumber_sys::DECQUAD_Pmax];
         unsafe {
             decnumber_sys::decQuadGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8);
-            buf.assume_init()
         }
+        buf
     }
 
     /// Computes the exponent of the number.
@@ -338,13 +338,10 @@ impl Decimal128 {
     ///
     /// For a brief description of the ordering, consult [`f32::total_cmp`].
     pub fn total_cmp(&self, rhs: &Decimal128) -> Ordering {
-        let mut d = MaybeUninit::<decnumber_sys::decQuad>::uninit();
-        let d = Decimal128 {
-            inner: unsafe {
-                decnumber_sys::decQuadCompareTotal(d.as_mut_ptr(), &self.inner, &rhs.inner);
-                d.assume_init()
-            },
-        };
+        let mut d = Decimal128::ZERO;
+        unsafe {
+            decnumber_sys::decQuadCompareTotal(&mut d.inner, &self.inner, &rhs.inner);
+        }
         if d.is_positive() {
             Ordering::Greater
         } else if d.is_negative() {
@@ -399,23 +396,21 @@ impl FromStr for Decimal128 {
 
 impl From<i32> for Decimal128 {
     fn from(n: i32) -> Decimal128 {
-        let mut d = MaybeUninit::<decnumber_sys::decQuad>::uninit();
-        let d = unsafe {
-            decnumber_sys::decQuadFromInt32(d.as_mut_ptr(), n);
-            d.assume_init()
-        };
-        Decimal128 { inner: d }
+        let mut d = Decimal128::ZERO;
+        unsafe {
+            decnumber_sys::decQuadFromInt32(&mut d.inner, n);
+        }
+        d
     }
 }
 
 impl From<u32> for Decimal128 {
     fn from(n: u32) -> Decimal128 {
-        let mut d = MaybeUninit::<decnumber_sys::decQuad>::uninit();
-        let d = unsafe {
-            decnumber_sys::decQuadFromUInt32(d.as_mut_ptr(), n);
-            d.assume_init()
-        };
-        Decimal128 { inner: d }
+        let mut d = Decimal128::ZERO;
+        unsafe {
+            decnumber_sys::decQuadFromUInt32(&mut d.inner, n);
+        }
+        d
     }
 }
 
@@ -449,12 +444,11 @@ impl From<Decimal32> for Decimal128 {
 
 impl From<Decimal64> for Decimal128 {
     fn from(d64: Decimal64) -> Decimal128 {
-        let mut d128 = MaybeUninit::<decnumber_sys::decQuad>::uninit();
-        let d128 = unsafe {
-            decnumber_sys::decDoubleToWider(&d64.inner, d128.as_mut_ptr());
-            d128.assume_init()
-        };
-        Decimal128 { inner: d128 }
+        let mut d128 = Decimal128::ZERO;
+        unsafe {
+            decnumber_sys::decDoubleToWider(&d64.inner, &mut d128.inner);
+        }
+        d128
     }
 }
 
@@ -615,15 +609,14 @@ impl Context<Decimal128> {
         S: Into<Vec<u8>>,
     {
         let c_string = CString::new(s).map_err(|_| ParseDecimalError)?;
-        let mut d = MaybeUninit::<decnumber_sys::decQuad>::uninit();
-        let d = unsafe {
-            decnumber_sys::decQuadFromString(d.as_mut_ptr(), c_string.as_ptr(), &mut self.inner);
-            d.assume_init()
-        };
+        let mut d = Decimal128::ZERO;
+        unsafe {
+            decnumber_sys::decQuadFromString(&mut d.inner, c_string.as_ptr(), &mut self.inner);
+        }
         if (self.inner.status & decnumber_sys::DEC_Conversion_syntax) != 0 {
             Err(ParseDecimalError)
         } else {
-            Ok(Decimal128 { inner: d })
+            Ok(d)
         }
     }
 
@@ -632,12 +625,11 @@ impl Context<Decimal128> {
     /// The result may be inexact. The status fields on the context will be set
     /// appropriately if so.
     pub fn from_decimal<const N: usize>(&mut self, d: &Decimal<N>) -> Decimal128 {
-        let mut d128 = MaybeUninit::<decnumber_sys::decQuad>::uninit();
-        let d128 = unsafe {
-            decnumber_sys::decimal128FromNumber(d128.as_mut_ptr(), d.as_ptr(), &mut self.inner);
-            d128.assume_init()
-        };
-        Decimal128 { inner: d128 }
+        let mut d128 = Decimal128::ZERO;
+        unsafe {
+            decnumber_sys::decimal128FromNumber(&mut d128.inner, d.as_ptr(), &mut self.inner);
+        }
+        d128
     }
 
     /// Constructs a number from an `i128`.
@@ -876,18 +868,10 @@ impl Context<Decimal128> {
     /// If either `lhs` or `rhs` is a NaN, returns `None`. To force an ordering
     /// upon NaNs, use [`Decimal128::total_cmp`].
     pub fn partial_cmp(&mut self, lhs: Decimal128, rhs: Decimal128) -> Option<Ordering> {
-        let mut d = MaybeUninit::<decnumber_sys::decQuad>::uninit();
-        let d = Decimal128 {
-            inner: unsafe {
-                decnumber_sys::decQuadCompare(
-                    d.as_mut_ptr(),
-                    &lhs.inner,
-                    &rhs.inner,
-                    &mut self.inner,
-                );
-                d.assume_init()
-            },
-        };
+        let mut d = Decimal128::ZERO;
+        unsafe {
+            decnumber_sys::decQuadCompare(&mut d.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+        }
         if d.is_positive() {
             Some(Ordering::Greater)
         } else if d.is_negative() {

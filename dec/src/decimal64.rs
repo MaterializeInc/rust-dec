@@ -199,11 +199,11 @@ impl Decimal64 {
     ///
     /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
     pub fn coefficient_digits(&self) -> [u8; decnumber_sys::DECDOUBLE_Pmax] {
-        let mut buf = MaybeUninit::<[u8; decnumber_sys::DECDOUBLE_Pmax]>::uninit();
+        let mut buf = [0u8; decnumber_sys::DECDOUBLE_Pmax];
         unsafe {
-            decnumber_sys::decDoubleGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8);
-            buf.assume_init()
+            decnumber_sys::decDoubleGetCoefficient(&self.inner, &mut buf as *mut u8);
         }
+        buf
     }
 
     /// Computes the exponent of the number.
@@ -314,13 +314,10 @@ impl Decimal64 {
     ///
     /// For a brief description of the ordering, consult [`f32::total_cmp`].
     pub fn total_cmp(&self, rhs: &Decimal64) -> Ordering {
-        let mut d = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d = Decimal64 {
-            inner: unsafe {
-                decnumber_sys::decDoubleCompareTotal(d.as_mut_ptr(), &self.inner, &rhs.inner);
-                d.assume_init()
-            },
-        };
+        let mut d = Decimal64::ZERO;
+        unsafe {
+            decnumber_sys::decDoubleCompareTotal(&mut d.inner, &self.inner, &rhs.inner);
+        }
         if d.is_positive() {
             Ordering::Greater
         } else if d.is_negative() {
@@ -379,34 +376,31 @@ impl FromStr for Decimal64 {
 
 impl From<i32> for Decimal64 {
     fn from(n: i32) -> Decimal64 {
-        let mut d = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d = unsafe {
-            decnumber_sys::decDoubleFromInt32(d.as_mut_ptr(), n);
-            d.assume_init()
+        let mut d = Decimal64::ZERO;
+        unsafe {
+            decnumber_sys::decDoubleFromInt32(&mut d.inner, n);
         };
-        Decimal64 { inner: d }
+        d
     }
 }
 
 impl From<u32> for Decimal64 {
     fn from(n: u32) -> Decimal64 {
-        let mut d = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d = unsafe {
-            decnumber_sys::decDoubleFromUInt32(d.as_mut_ptr(), n);
-            d.assume_init()
+        let mut d = Decimal64::ZERO;
+        unsafe {
+            decnumber_sys::decDoubleFromUInt32(&mut d.inner, n);
         };
-        Decimal64 { inner: d }
+        d
     }
 }
 
 impl From<Decimal32> for Decimal64 {
     fn from(d32: Decimal32) -> Decimal64 {
-        let mut d64 = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d64 = unsafe {
-            decnumber_sys::decSingleToWider(&d32.inner, d64.as_mut_ptr());
-            d64.assume_init()
-        };
-        Decimal64 { inner: d64 }
+        let mut d64 = Decimal64::ZERO;
+        unsafe {
+            decnumber_sys::decSingleToWider(&d32.inner, &mut d64.inner);
+        }
+        d64
     }
 }
 
@@ -567,15 +561,14 @@ impl Context<Decimal64> {
         S: Into<Vec<u8>>,
     {
         let c_string = CString::new(s).map_err(|_| ParseDecimalError)?;
-        let mut d = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d = unsafe {
-            decnumber_sys::decDoubleFromString(d.as_mut_ptr(), c_string.as_ptr(), &mut self.inner);
-            d.assume_init()
+        let mut d = Decimal64::ZERO;
+        unsafe {
+            decnumber_sys::decDoubleFromString(&mut d.inner, c_string.as_ptr(), &mut self.inner);
         };
         if (self.inner.status & decnumber_sys::DEC_Conversion_syntax) != 0 {
             Err(ParseDecimalError)
         } else {
-            Ok(Decimal64 { inner: d })
+            Ok(d)
         }
     }
 
@@ -584,12 +577,11 @@ impl Context<Decimal64> {
     /// The result may be inexact. The status fields on the context will be set
     /// appropriately if so.
     pub fn from_decimal128(&mut self, d128: Decimal128) -> Decimal64 {
-        let mut d64 = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d64 = unsafe {
-            decnumber_sys::decDoubleFromWider(d64.as_mut_ptr(), &d128.inner, &mut self.inner);
-            d64.assume_init()
+        let mut d64 = Decimal64::ZERO;
+        unsafe {
+            decnumber_sys::decDoubleFromWider(&mut d64.inner, &d128.inner, &mut self.inner);
         };
-        Decimal64 { inner: d64 }
+        d64
     }
 
     /// Constructs a number from an arbitrary-precision decimal.
@@ -597,12 +589,11 @@ impl Context<Decimal64> {
     /// The result may be inexact. The status fields on the context will be set
     /// appropriately if so.
     pub fn from_decimal<const N: usize>(&mut self, d: &Decimal<N>) -> Decimal64 {
-        let mut d64 = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d64 = unsafe {
-            decnumber_sys::decimal64FromNumber(d64.as_mut_ptr(), d.as_ptr(), &mut self.inner);
-            d64.assume_init()
+        let mut d64 = Decimal64::ZERO;
+        unsafe {
+            decnumber_sys::decimal64FromNumber(&mut d64.inner, d.as_ptr(), &mut self.inner);
         };
-        Decimal64 { inner: d64 }
+        d64
     }
 
     /// Constructs a number from an `i64`.
@@ -854,18 +845,10 @@ impl Context<Decimal64> {
     /// upon NaNs, use [`Decimal64::total_cmp`] or
     /// [`OrderedDecimal`](crate::OrderedDecimal).
     pub fn partial_cmp(&mut self, lhs: Decimal64, rhs: Decimal64) -> Option<Ordering> {
-        let mut d = MaybeUninit::<decnumber_sys::decDouble>::uninit();
-        let d = Decimal64 {
-            inner: unsafe {
-                decnumber_sys::decDoubleCompare(
-                    d.as_mut_ptr(),
-                    &lhs.inner,
-                    &rhs.inner,
-                    &mut self.inner,
-                );
-                d.assume_init()
-            },
-        };
+        let mut d = Decimal64::ZERO;
+        unsafe {
+            decnumber_sys::decDoubleCompare(&mut d.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+        }
         if d.is_positive() {
             Some(Ordering::Greater)
         } else if d.is_negative() {

@@ -21,6 +21,40 @@ use dec::Context;
 fn test_serde() {
     const N: usize = 12;
     let mut cx = Context::<dec::Decimal<N>>::default();
+    let d = cx.parse("-12.34").unwrap();
+
+    assert_tokens(
+        &d,
+        &[
+            Token::Struct {
+                name: "Decimal",
+                len: 4,
+            },
+            Token::Str("digits"),
+            Token::U32(4),
+            Token::Str("exponent"),
+            Token::I32(-2),
+            Token::Str("bits"),
+            // This is equal to decnumber_sys::DECNEG
+            Token::U8(128),
+            Token::Str("lsu"),
+            Token::Seq { len: Some(12) },
+            Token::U16(234),
+            Token::U16(1),
+            Token::U16(0),
+            Token::U16(0),
+            Token::U16(0),
+            Token::U16(0),
+            Token::U16(0),
+            Token::U16(0),
+            Token::U16(0),
+            Token::U16(0),
+            Token::U16(0),
+            Token::U16(0),
+            Token::SeqEnd,
+            Token::StructEnd,
+        ],
+    );
 
     let d = cx
         .parse("1234567890123456789012345678901234567890")

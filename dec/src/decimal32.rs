@@ -212,15 +212,14 @@ impl Context<Decimal32> {
         S: Into<Vec<u8>>,
     {
         let c_string = CString::new(s).map_err(|_| ParseDecimalError)?;
-        let mut d = MaybeUninit::<decnumber_sys::decSingle>::uninit();
-        let d = unsafe {
-            decnumber_sys::decSingleFromString(d.as_mut_ptr(), c_string.as_ptr(), &mut self.inner);
-            d.assume_init()
-        };
+        let mut d = Decimal32::ZERO;
+        unsafe {
+            decnumber_sys::decSingleFromString(&mut d.inner, c_string.as_ptr(), &mut self.inner);
+        }
         if (self.inner.status & decnumber_sys::DEC_Conversion_syntax) != 0 {
             Err(ParseDecimalError)
         } else {
-            Ok(Decimal32 { inner: d })
+            Ok(d)
         }
     }
 
@@ -229,12 +228,11 @@ impl Context<Decimal32> {
     /// The result may be inexact. The status fields on the context will be set
     /// appropriately if so.
     pub fn from_decimal64(&mut self, d64: Decimal64) -> Decimal32 {
-        let mut d32 = MaybeUninit::<decnumber_sys::decSingle>::uninit();
-        let d32 = unsafe {
-            decnumber_sys::decSingleFromWider(d32.as_mut_ptr(), &d64.inner, &mut self.inner);
-            d32.assume_init()
-        };
-        Decimal32 { inner: d32 }
+        let mut d32 = Decimal32::ZERO;
+        unsafe {
+            decnumber_sys::decSingleFromWider(&mut d32.inner, &d64.inner, &mut self.inner);
+        }
+        d32
     }
 
     /// Constructs a number from an arbitrary-precision decimal.
@@ -242,11 +240,10 @@ impl Context<Decimal32> {
     /// The result may be inexact. The status fields on the context will be set
     /// appropriately if so.
     pub fn from_decimal<const N: usize>(&mut self, d: &Decimal<N>) -> Decimal32 {
-        let mut d32 = MaybeUninit::<decnumber_sys::decSingle>::uninit();
-        let d32 = unsafe {
-            decnumber_sys::decimal32FromNumber(d32.as_mut_ptr(), d.as_ptr(), &mut self.inner);
-            d32.assume_init()
-        };
-        Decimal32 { inner: d32 }
+        let mut d32 = Decimal32::ZERO;
+        unsafe {
+            decnumber_sys::decimal32FromNumber(&mut d32.inner, d.as_ptr(), &mut self.inner);
+        }
+        d32
     }
 }
