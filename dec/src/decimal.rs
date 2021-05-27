@@ -736,14 +736,13 @@ impl<const N: usize> Context<Decimal<N>> {
     {
         validate_n(N);
         let c_string = CString::new(s).map_err(|_| ParseDecimalError)?;
-        let mut d = MaybeUninit::<Decimal<N>>::uninit();
-        let d = unsafe {
+        let mut d = Decimal::zero();
+        unsafe {
             decnumber_sys::decNumberFromString(
                 d.as_mut_ptr() as *mut decnumber_sys::decNumber,
                 c_string.as_ptr(),
                 &mut self.inner,
             );
-            d.assume_init()
         };
         if (self.inner.status & decnumber_sys::DEC_Conversion_syntax) != 0 {
             Err(ParseDecimalError)
