@@ -1277,6 +1277,14 @@ impl<const N: usize> Context<Decimal<N>> {
         }
     }
 
+    /// Rounds the number to an integral value using the rounding mode in the
+    /// context.
+    pub fn round(&mut self, n: &mut Decimal<N>) {
+        unsafe {
+            decnumber_sys::decNumberToIntegralExact(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+        }
+    }
+
     /// Shifts the digits of `lhs` by `rhs`, storing the result in `lhs`.
     ///
     /// If `rhs` is positive, shifts to the left. If `rhs` is negative, shifts

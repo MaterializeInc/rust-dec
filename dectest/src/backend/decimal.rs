@@ -292,8 +292,9 @@ impl Backend for DecimalBackend {
         Ok(lhs)
     }
 
-    fn round(&mut self, _: Self::D) -> BackendResult<Self::D> {
-        Err(BackendError::Unsupported)
+    fn round(&mut self, mut n: Self::D) -> BackendResult<Self::D> {
+        self.cx.round(&mut n);
+        Ok(n)
     }
 
     fn scaleb(&mut self, mut lhs: Self::D, rhs: Self::D) -> BackendResult<Self::D> {

@@ -5,6 +5,10 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## Unreleased
+
+- Support `round` for `Decimal`.
+
 ## 0.4.0 - 2021-05-20
 
 * Add the following methods:
