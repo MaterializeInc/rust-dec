@@ -542,6 +542,65 @@ impl<const N: usize> TryFrom<Decimal<N>> for isize {
     }
 }
 
+macro_rules! decnum_tryinto_primitive_float {
+    ($p:ty, $cx:expr, $d:expr) => {{
+        if $d.is_infinite() {
+            return Ok(if $d.is_negative() {
+                <$p>::NEG_INFINITY
+            } else {
+                <$p>::INFINITY
+            });
+        }
+        if $d.is_nan() {
+            return Ok(<$p>::NAN);
+        }
+
+        const TEN: $p = 10.0;
+        const DECDPUN_F: $p = decnumber_sys::DECDPUN as $p;
+
+        let mut e = $d.exponent() as $p;
+        let mut f: $p = 0.0;
+        for u in $d.coefficient_units() {
+            // `powi` gives wrong results on some input, whereas `powf` does not
+            f += <$p>::from(*u) * TEN.powf(e);
+            e += DECDPUN_F;
+        }
+        if $d.is_negative() {
+            f = -f;
+        }
+
+        // Value over- or underflows $p:
+        // - f.is_infinite() represents generic overflow
+        // - f.is_nan() can occur when multiplying a coefficient unit by a power
+        //   of 10 that exceeds the primitive type's maximum exponent
+        // - (!$d.is_zero() && f == 0.0) represents underflow
+        if f.is_infinite() || f.is_nan() || (!$d.is_zero() && f == 0.0) {
+            let mut s = $cx.status();
+            s.set_invalid_operation();
+            $cx.set_status(s);
+            Err(TryFromDecimalError)
+        } else {
+            Ok(f)
+        }
+    }};
+}
+
+impl<const N: usize> TryFrom<Decimal<N>> for f32 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<f32, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_f32(n)
+    }
+}
+
+impl<const N: usize> TryFrom<Decimal<N>> for f64 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<f64, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_f64(n)
+    }
+}
+
 impl<const N: usize> From<u32> for Decimal<N> {
     fn from(n: u32) -> Decimal<N> {
         let mut d = Decimal::default();
@@ -1020,6 +1079,24 @@ impl<const N: usize> Context<Decimal<N>> {
     /// function.
     pub fn try_into_u128(&mut self, d: Decimal<N>) -> Result<u128, TryFromDecimalError> {
         decnum_tryinto_primitive_uint!(u128, self, 39, d)
+    }
+
+    /// Attempts to convert `d` to `f32` or fails if not possible.
+    ///
+    /// Note that this function:
+    /// - Errors for values that over- or underflow `f32`, rather than returning
+    ///   infinity or `0.0`, respectively.
+    /// - Returns a primitive infinity or NaN if `d` is an equivalent value.
+    pub fn try_into_f32(&mut self, d: Decimal<N>) -> Result<f32, TryFromDecimalError> {
+        decnum_tryinto_primitive_float!(f32, self, d)
+    }
+
+    /// Attempts to convert `d` to `f32` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_f32()`], which also apply to this
+    /// function.
+    pub fn try_into_f64(&mut self, d: Decimal<N>) -> Result<f64, TryFromDecimalError> {
+        decnum_tryinto_primitive_float!(f64, self, d)
     }
 
     /// Computes the digitwise logical inversion of `n`, storing the result in

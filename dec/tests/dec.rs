@@ -1676,6 +1676,102 @@ fn test_decnum_tryinto_primitive() {
 }
 
 #[test]
+fn test_decnum_tryinto_primitive_f32() {
+    const WIDTH: usize = 14;
+    fn inner(s: &str, e: Result<f32, ()>) {
+        let mut cx = Context::<Decimal<WIDTH>>::default();
+        let d = cx.parse(s).unwrap();
+        let r = cx.try_into_f32(d);
+        if e.is_err() {
+            assert!(r.is_err(), "expected {:?}, got {:?}", e, r)
+        } else {
+            let e = e.unwrap();
+            let r = r.unwrap();
+            if e.is_nan() {
+                assert!(r.is_nan())
+            } else {
+                assert_eq!(e, r)
+            }
+        }
+    }
+    inner("1.234", Ok(1.234));
+    inner("1234.567891234567", Ok(1234.5679));
+    inner(
+        "0.0000000000000001234567891234567",
+        Ok(0.00000000000000012345679),
+    );
+    inner(
+        "-0.0000000000000001234567891234567",
+        Ok(-0.00000000000000012345679),
+    );
+    inner("0.000", Ok(0.0));
+    inner("NaN", Ok(f32::NAN));
+    inner("-NaN", Ok(f32::NAN));
+    inner("Infinity", Ok(f32::INFINITY));
+    inner("-Infinity", Ok(f32::NEG_INFINITY));
+    inner("1000", Ok(1000.0));
+    inner(&f32::MAX.to_string(), Ok(f32::MAX));
+    inner(&f32::MIN.to_string(), Ok(f32::MIN));
+    inner(&f64::MAX.to_string(), Err(()));
+    inner(&f64::MIN.to_string(), Err(()));
+    inner("1e39", Err(()));
+    inner("1e-50", Err(()));
+}
+
+#[test]
+fn test_decnum_tryinto_primitive_f64() {
+    const WIDTH: usize = 14;
+    fn inner(s: &str, f: Result<f64, ()>) {
+        let mut cx = Context::<Decimal<WIDTH>>::default();
+        let d = cx.parse(s).unwrap();
+        let r = cx.try_into_f64(d);
+
+        if f.is_err() {
+            assert!(r.is_err(), "expected {:?}, got {:?}", f, r)
+        } else {
+            let f = f.unwrap();
+            let r = r.unwrap();
+            if f.is_nan() {
+                assert!(f.is_nan())
+            } else {
+                assert_eq!(f, r)
+            }
+        }
+    }
+    inner("1.234", Ok(1.234));
+    inner(
+        "1234567890.12345678901234567891234567890",
+        Ok(1234567890.1234568),
+    );
+    inner(
+        "12345678912345678901.234567891234567890",
+        Ok(12345678912345680000.0),
+    );
+    inner(
+        ".0000000000000000000000012345678912345678901234567891234567890",
+        Ok(0.000000000000000000000001234567891234568),
+    );
+    inner(
+        "1.2345678912345678901234567891234567890E-24",
+        Ok(0.000000000000000000000001234567891234568),
+    );
+    inner(
+        "-1.2345678912345678901234567891234567890E-24",
+        Ok(-0.000000000000000000000001234567891234568),
+    );
+    inner("1e39", Ok(1000000000000000000000000000000000000000.0));
+    inner("0.000", Ok(0.0));
+    inner(&f64::MAX.to_string(), Ok(f64::MAX));
+    inner(&f64::MIN.to_string(), Ok(f64::MIN));
+    inner("NaN", Ok(f64::NAN));
+    inner("-NaN", Ok(f64::NAN));
+    inner("Infinity", Ok(f64::INFINITY));
+    inner("-Infinity", Ok(f64::NEG_INFINITY));
+    inner("1e500", Err(()));
+    inner("1e-500", Err(()));
+}
+
+#[test]
 fn test_decnum_coefficient() {
     const WIDTH: usize = 14;
     let mut cx = Context::<Decimal<WIDTH>>::default();
