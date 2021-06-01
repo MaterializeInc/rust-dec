@@ -201,7 +201,7 @@ impl Decimal64 {
     pub fn coefficient_digits(&self) -> [u8; decnumber_sys::DECDOUBLE_Pmax] {
         let mut buf = [0u8; decnumber_sys::DECDOUBLE_Pmax];
         unsafe {
-            decnumber_sys::decDoubleGetCoefficient(&self.inner, &mut buf as *mut u8);
+            decnumber_sys::decDoubleGetCoefficient(&self.inner, buf.as_mut_ptr() as *mut u8);
         }
         buf
     }
