@@ -10,7 +10,10 @@ Versioning].
 * Support the following `Decimal` functions:
   - `round`
   - `from_raw_parts`
+
 * Implement `TryInto<Decimal<N>>` for `f32` and `f64`.
+
+* Implement `From<f32>` and `From<f64>` for `<Decimal<N>>`.
 
 ## 0.4.0 - 2021-05-20
 

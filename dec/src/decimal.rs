@@ -601,6 +601,20 @@ impl<const N: usize> TryFrom<Decimal<N>> for f64 {
     }
 }
 
+impl<const N: usize> From<f32> for Decimal<N> {
+    fn from(n: f32) -> Decimal<N> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.from_f32(n)
+    }
+}
+
+impl<const N: usize> From<f64> for Decimal<N> {
+    fn from(n: f64) -> Decimal<N> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.from_f64(n)
+    }
+}
+
 impl<const N: usize> From<u32> for Decimal<N> {
     fn from(n: u32) -> Decimal<N> {
         let mut d = Decimal::default();
@@ -1097,6 +1111,30 @@ impl<const N: usize> Context<Decimal<N>> {
     /// function.
     pub fn try_into_f64(&mut self, d: Decimal<N>) -> Result<f64, TryFromDecimalError> {
         decnum_tryinto_primitive_float!(f64, self, d)
+    }
+
+    /// Converts an `f32` to a `Decimal<N>`.
+    ///
+    /// Note that this conversion is infallible because `f32`'s:
+    /// - Maximum precision is ~8
+    /// - Min/max exponent is ~ -37, 37
+    ///
+    /// Both of these are guaranteed to fit comfortably within `Decimal`'s
+    /// constraints.
+    pub fn from_f32(&mut self, n: f32) -> Decimal<N> {
+        self.parse(n.to_string().as_str()).unwrap()
+    }
+
+    /// Converts an `f64` to a `Decimal<N>`.
+    ///
+    /// Note that this conversion is infallible because `f64`'s:
+    /// - Maximum precision is ~18
+    /// - Min/max exponent is ~ -305, 305
+    ///
+    /// Both of these are guaranteed to fit comfortably within `Decimal`'s
+    /// constraints.
+    pub fn from_f64(&mut self, n: f64) -> Decimal<N> {
+        self.parse(n.to_string().as_str()).unwrap()
     }
 
     /// Computes the digitwise logical inversion of `n`, storing the result in
