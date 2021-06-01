@@ -7,7 +7,9 @@ Versioning].
 
 ## Unreleased
 
-- Support `round` for `Decimal`.
+- Support the following `Decimal` functions:
+  - `round`
+  - `from_raw_parts`
 
 ## 0.4.0 - 2021-05-20
 
