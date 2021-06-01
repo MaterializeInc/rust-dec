@@ -313,6 +313,26 @@ impl<const N: usize> Decimal<N> {
         (self.digits, self.exponent, self.bits, self.lsu)
     }
 
+    /// Returns a `Decimal::<N>` with the supplied raw parts.
+    ///
+    /// # Safety
+    ///
+    /// The raw parts must be valid according to the guarantees required by the
+    /// underlying C library, or undefined behavior can result. The easiest way
+    /// to uphold these guarantees is to ensure the raw parts originate from a
+    /// call to `Decimal::to_raw_parts`.
+    pub unsafe fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu_in: &[u16]) -> Self {
+        let mut lsu = [0; N];
+        lsu.copy_from_slice(lsu_in);
+
+        Decimal::<N> {
+            digits,
+            exponent,
+            bits,
+            lsu,
+        }
+    }
+
     /// Returns a string of the number in standard notation, i.e. guaranteed to
     /// not be scientific notation.
     pub fn to_standard_notation_string(&self) -> String {

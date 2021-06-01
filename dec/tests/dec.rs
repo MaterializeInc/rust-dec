@@ -1757,3 +1757,35 @@ fn test_decnum_coefficient() {
     inner(&min_i128);
     inner(&max_i128);
 }
+
+#[test]
+fn decnum_raw_parts() {
+    fn inner(s: &str, o: Option<i128>) {
+        const N: usize = 13;
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.parse(s).unwrap();
+        let (digits, exponent, bits, lsu) = d.to_raw_parts();
+        let r = unsafe { Decimal::<N>::from_raw_parts(digits, exponent, bits, &lsu) };
+        if d.is_nan() {
+            assert!(r.is_nan())
+        } else {
+            assert_eq!(d, r);
+        }
+        if let Some(o) = o {
+            let o = cx.from_i128(o);
+            assert_eq!(o, d);
+        }
+    }
+    inner("1", Some(1));
+    inner("-1", Some(-1));
+    inner("0.00", Some(0));
+    inner("987654321", Some(987654321));
+    inner("-987654321", Some(-987654321));
+    inner(&i128::MAX.to_string(), Some(i128::MAX));
+    inner(&i128::MIN.to_string(), Some(i128::MIN));
+    inner("98765.4321", None);
+    inner("-98765.4321", None);
+    inner("Infinity", None);
+    inner("-Infinity", None);
+    inner("NaN", None);
+}
