@@ -1772,6 +1772,70 @@ fn test_decnum_tryinto_primitive_f64() {
 }
 
 #[test]
+fn test_decnum_try_from_f32() {
+    const WIDTH: usize = 12;
+    fn inner(f: f32, e: &str) {
+        let mut cx = Context::<Decimal<WIDTH>>::default();
+        let d = cx.from_f32(f);
+        let e = cx.parse(e).unwrap();
+        if e.is_nan() {
+            assert!(d.is_nan());
+        } else {
+            assert_eq!(d, e);
+        }
+    }
+    inner(0f32, "0");
+    inner(0.0f32, "0");
+    inner(1f32, "1");
+    inner(101.101, "101.101");
+    inner(-101.101, "-101.101");
+    inner(f32::MAX, &f32::MAX.to_string());
+    inner(f32::MIN, &f32::MIN.to_string());
+    inner(f32::INFINITY, "infinity");
+    inner(f32::NEG_INFINITY, "-infinity");
+    inner(f32::NAN, "NaN");
+    inner(1.2345e-45f32, "1E-45");
+    inner(
+        12345678901234567890123456789012345678f32,
+        "1.23456780000000000000000000000000000E+37",
+    );
+}
+
+#[test]
+fn test_decnum_try_from_f64() {
+    const WIDTH: usize = 12;
+    fn inner(f: f64, e: &str) {
+        println!("f {}", f);
+        let mut cx = Context::<Decimal<WIDTH>>::default();
+        let d = cx.from_f64(f);
+        let e = cx.parse(e).unwrap();
+        if e.is_nan() {
+            assert!(d.is_nan());
+        } else {
+            assert_eq!(d, e);
+        }
+    }
+    inner(0f64, "0");
+    inner(0.0f64, "0");
+    inner(1f64, "1");
+    inner(101.101, "101.101");
+    inner(-101.101, "-101.101");
+    inner(f64::MAX, &f64::MAX.to_string());
+    inner(f64::MIN, &f64::MIN.to_string());
+    inner(f64::INFINITY, "infinity");
+    inner(f64::NEG_INFINITY, "-infinity");
+    inner(f64::NAN, "NaN");
+    inner(1.2345e-45f64, "1.2345E-45");
+    inner(
+        12345678901234567890123456789012345678901234567890123456789012345678901234567890f64,
+        "1.23456789012345680000000000000000000E+79",
+    );
+    inner(9.8765431E-300, "9.8765431E-300");
+    inner(9.8765431E-400, "0");
+    inner(9.8765431E305, "9.87654310000000000000000000000000000E+305");
+}
+
+#[test]
 fn test_decnum_coefficient() {
     const WIDTH: usize = 14;
     let mut cx = Context::<Decimal<WIDTH>>::default();
