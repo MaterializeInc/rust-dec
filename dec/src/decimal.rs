@@ -345,6 +345,14 @@ impl<const N: usize> Decimal<N> {
     pub fn to_standard_notation_string(&self) -> String {
         to_standard_notation_string!(self)
     }
+
+    /// Removes insignificant trailing zeros from a number, unconditionally, and
+    /// stores the modified value in `self`.
+    pub fn trim(&mut self) {
+        unsafe {
+            decnumber_sys::decNumberTrim(self.as_mut_ptr());
+        }
+    }
 }
 
 impl<const N: usize> Default for Decimal<N> {
