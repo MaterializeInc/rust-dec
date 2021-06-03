@@ -210,6 +210,13 @@ impl<const N: usize> Decimal<N> {
         self.exponent = exponent;
     }
 
+    /// Returns access to the valid digits from `self`'s `lsu`.
+    pub(crate) fn lsu(&self) -> &[u16] {
+        let valid_lsu_len = (usize::try_from(self.digits()).unwrap() + decnumber_sys::DECDPUN - 1)
+            / decnumber_sys::DECDPUN;
+        &self.lsu[0..valid_lsu_len]
+    }
+
     /// Reports whether the number is finite.
     ///
     /// A finite number is one that is neither infinite nor a NaN.
@@ -309,8 +316,8 @@ impl<const N: usize> Decimal<N> {
     /// Returns the raw parts of this decimal.
     ///
     /// The meaning of these parts are unspecified and subject to change.
-    pub fn to_raw_parts(&self) -> (u32, i32, u8, [u16; N]) {
-        (self.digits, self.exponent, self.bits, self.lsu)
+    pub fn to_raw_parts(&self) -> (u32, i32, u8, &[u16]) {
+        (self.digits, self.exponent, self.bits, &self.lsu())
     }
 
     /// Returns a `Decimal::<N>` with the supplied raw parts.
@@ -323,7 +330,7 @@ impl<const N: usize> Decimal<N> {
     /// call to `Decimal::to_raw_parts`.
     pub unsafe fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu_in: &[u16]) -> Self {
         let mut lsu = [0; N];
-        lsu.copy_from_slice(lsu_in);
+        lsu[..lsu_in.len()].copy_from_slice(lsu_in);
 
         Decimal::<N> {
             digits,
