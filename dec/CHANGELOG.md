@@ -5,15 +5,20 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## Unreleased
+## 0.4.1 - 2021-06-03
 
 * Support the following `Decimal` functions:
   - `round`
+  - `trim`
   - `from_raw_parts`
 
 * Implement `TryInto<Decimal<N>>` for `f32` and `f64`.
 
 * Implement `From<f32>` and `From<f64>` for `<Decimal<N>>`.
+
+* Change `to_raw_parts` to only return valid digits from a `Decimal`'s `lsu`; it
+  previously returned the entire `lsu`, including digits that were no longer
+  valid after e.g. `trim` operations.
 
 ## 0.4.0 - 2021-05-20
 
