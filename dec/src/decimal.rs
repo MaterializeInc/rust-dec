@@ -169,13 +169,8 @@ impl<const N: usize> Decimal<N> {
     /// The result is ordered with the least significant digits at index 0.
     ///
     /// [dpd]: http://speleotrove.com/decimal/dnnumb.html
-    fn coefficient_units(&self) -> &[u16] {
-        // The number of units is the number of digits /
-        // `decnumber_sys::DECDPUN`, with an additional unit if there is any
-        // remainder of the division. The simplest means of "rounding up" is to
-        // add `decnumber_sys::DECDPUN - 1`.
-        let units_len = (usize::try_from(self.digits()).unwrap() + decnumber_sys::DECDPUN - 1)
-            / decnumber_sys::DECDPUN;
+    pub(crate) fn coefficient_units(&self) -> &[u16] {
+        let units_len = Self::digits_to_lsu_elements_len(self.digits);
         &self.lsu[0..units_len]
     }
 
@@ -200,6 +195,16 @@ impl<const N: usize> Decimal<N> {
         }
     }
 
+    /// Returns the number of elements required in the `lsu` to represent some
+    /// number of digits.
+    ///
+    /// This function is public and accepts a `u32` instead of a `Decimal` to
+    /// aid in decomposing ([`Self::to_raw_parts`]) and recomposing
+    /// ([`Self::from_raw_parts`]) values.
+    pub fn digits_to_lsu_elements_len(digits: u32) -> usize {
+        (usize::try_from(digits).unwrap() + decnumber_sys::DECDPUN - 1) / decnumber_sys::DECDPUN
+    }
+
     /// Computes the exponent of the number.
     pub fn exponent(&self) -> i32 {
         self.exponent
@@ -208,13 +213,6 @@ impl<const N: usize> Decimal<N> {
     /// Sets `self`'s exponent to the provided value.
     pub fn set_exponent(&mut self, exponent: i32) {
         self.exponent = exponent;
-    }
-
-    /// Returns access to the valid digits from `self`'s `lsu`.
-    pub(crate) fn lsu(&self) -> &[u16] {
-        let valid_lsu_len = (usize::try_from(self.digits()).unwrap() + decnumber_sys::DECDPUN - 1)
-            / decnumber_sys::DECDPUN;
-        &self.lsu[0..valid_lsu_len]
     }
 
     /// Reports whether the number is finite.
@@ -313,14 +311,29 @@ impl<const N: usize> Decimal<N> {
         Context::<Decimal128>::default().from_decimal(self)
     }
 
-    /// Returns the raw parts of this decimal.
+    /// Returns the raw parts of this decimal, with the `u16` elements of `lsu`
+    /// converted to `u8`.
     ///
     /// The meaning of these parts are unspecified and subject to change.
-    pub fn to_raw_parts(&self) -> (u32, i32, u8, &[u16]) {
-        (self.digits, self.exponent, self.bits, &self.lsu())
+    pub fn to_raw_parts(&self) -> (u32, i32, u8, &[u8]) {
+        // SAFETY: `lsu` (returned by `coefficient_units()`) is a `&[u16]`, so
+        // each element can safely be transmuted into two `u8`s.
+        let (prefix, lsu, suffix) = unsafe { self.coefficient_units().align_to::<u8>() };
+        // The `u8` aligned version of the `lsu` should have twice as many
+        // elements as we expect for the `u16` version.
+        assert!(
+            lsu.len() == Self::digits_to_lsu_elements_len(self.digits) * 2,
+            "u8 version of LSU contained the wrong number of elements; expected {}, but got {}",
+            Self::digits_to_lsu_elements_len(self.digits) * 2,
+            lsu.len()
+        );
+        // There should be no unaligned elements in the prefix or suffix.
+        assert!(prefix.is_empty() && suffix.is_empty());
+        (self.digits, self.exponent, self.bits, lsu)
     }
 
-    /// Returns a `Decimal::<N>` with the supplied raw parts.
+    /// Returns a `Decimal::<N>` with the supplied raw parts, which should be
+    /// generated using [`Decimal::to_raw_parts`].
     ///
     /// # Safety
     ///
@@ -328,9 +341,31 @@ impl<const N: usize> Decimal<N> {
     /// underlying C library, or undefined behavior can result. The easiest way
     /// to uphold these guarantees is to ensure the raw parts originate from a
     /// call to `Decimal::to_raw_parts`.
-    pub unsafe fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu_in: &[u16]) -> Self {
+    ///
+    /// # Panics
+    ///
+    /// If `lsu_u8` is not a slice that can be recomposed into a `&[16]` with
+    /// the number of digits implicitly specified by the `digits` parameter,
+    /// i.e. essentially `ceil(digits / decnumber_sys::DECDPUN)`. You can determine the appropriate
+    /// number of elements in `lsu_u8` using 2 *
+    /// [`Decimal::digits_to_lsu_elements_len`].
+    pub unsafe fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu_u8: &[u8]) -> Self {
+        assert!(
+            lsu_u8.len() == Self::digits_to_lsu_elements_len(digits) * 2,
+            "Expected lsu_u8 to have {} elements, but instead got {}",
+            Self::digits_to_lsu_elements_len(digits) * 2,
+            lsu_u8.len()
+        );
+
         let mut lsu = [0; N];
-        lsu[..lsu_in.len()].copy_from_slice(lsu_in);
+        for (i, v) in lsu_u8.chunks(2).enumerate() {
+            // Use native endian ordering, which matches the ordering generated
+            // for the `lsu`/`coefficient_units()` in `to_raw_parts`.
+            lsu[i] = u16::from_ne_bytes(
+                (*v).try_into()
+                    .expect("converting slice of 2 u8s to [u8; 2] to succeed"),
+            );
+        }
 
         Decimal::<N> {
             digits,

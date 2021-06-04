@@ -5,6 +5,18 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## Unreleased
+
+* Refactor `to_raw_parts` and `to_raw_parts` to use `&[u8]` to represent a
+  `Decimal`'s `lsu`.
+
+* Provide `Decimal::digits_to_lsu_elements_len` to provide a mechanism to
+  calculate the number of elements `lsu`s should have as a function of their
+  digits.
+
+* Remove the `lsu` function, which duplicated `coefficient_unit`'s
+  functionality.
+
 ## 0.4.1 - 2021-06-03
 
 * Support the following `Decimal` functions:
