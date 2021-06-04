@@ -5,7 +5,7 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## Unreleased
+## 0.4.2 - 2021-06-04
 
 * Refactor `to_raw_parts` and `to_raw_parts` to use `&[u8]` to represent a
   `Decimal`'s `lsu`.
