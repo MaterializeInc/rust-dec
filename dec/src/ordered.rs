@@ -216,7 +216,7 @@ impl<const N: usize> Hash for OrderedDecimal<Decimal<N>> {
         d.digits.hash(state);
         d.exponent.hash(state);
         d.bits.hash(state);
-        d.lsu().hash(state);
+        d.coefficient_units().hash(state);
     }
 }
 
