@@ -220,9 +220,13 @@ fn test_overloading() -> Result<(), Box<dyn Error>> {
     inner::<OrderedDecimal<Decimal128>, Decimal128>()?;
     inner::<Decimal64, OrderedDecimal<Decimal64>>()?;
     inner::<Decimal128, OrderedDecimal<Decimal128>>()?;
+    inner::<Decimal<12>, Decimal<12>>()?;
+    inner::<Decimal<15>, Decimal<12>>()?;
+    inner::<Decimal<12>, Decimal<15>>()?;
 
     Ok(())
 }
+
 #[test]
 fn test_i64_to_decimal() -> Result<(), Box<dyn Error>> {
     use dec::Decimal;
