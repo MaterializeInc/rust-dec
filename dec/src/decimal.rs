@@ -17,9 +17,12 @@ use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::iter::{Product, Sum};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
-use std::ops::Neg;
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
 use std::str::FromStr;
 
 use libc::c_char;
@@ -414,6 +417,148 @@ impl<const N: usize> PartialEq for Decimal<N> {
     }
 }
 
+impl<const N: usize> Neg for Decimal<N> {
+    type Output = Decimal<N>;
+
+    /// Note that this clones `self` to generate the negative value. For a
+    /// non-cloning method, use `Context::<N>::neg`.
+    fn neg(self) -> Decimal<N> {
+        let mut n = self.clone();
+        unsafe {
+            decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
+        }
+        n
+    }
+}
+
+impl<const M: usize, const N: usize> Add<Decimal<M>> for Decimal<N> {
+    type Output = Self;
+
+    /// Note that this clones `self` to generate the output. For a
+    /// non-cloning method, use `Context::<N>::add`.
+    fn add(self, rhs: Decimal<M>) -> Self {
+        let mut lhs = self.clone();
+        Context::<Self>::default().add(&mut lhs, &rhs);
+        lhs
+    }
+}
+
+impl<const M: usize, const N: usize> AddAssign<Decimal<M>> for Decimal<N> {
+    fn add_assign(&mut self, rhs: Decimal<M>) {
+        Context::<Self>::default().add(self, &rhs);
+    }
+}
+
+impl<const M: usize, const N: usize> Div<Decimal<M>> for Decimal<N> {
+    type Output = Self;
+
+    /// Note that this clones `self` to generate the output. For a
+    /// non-cloning method, use `Context::<N>::div`.
+    fn div(self, rhs: Decimal<M>) -> Self {
+        let mut lhs = self.clone();
+        Context::<Self>::default().div(&mut lhs, &rhs);
+        lhs
+    }
+}
+
+impl<const M: usize, const N: usize> DivAssign<Decimal<M>> for Decimal<N> {
+    fn div_assign(&mut self, rhs: Decimal<M>) {
+        Context::<Self>::default().div(self, &rhs);
+    }
+}
+
+impl<const M: usize, const N: usize> Mul<Decimal<M>> for Decimal<N> {
+    type Output = Self;
+
+    /// Note that this clones `self` to generate the output. For a
+    /// non-cloning method, use `Context::<N>::mul`.
+    fn mul(self, rhs: Decimal<M>) -> Self {
+        let mut lhs = self.clone();
+        Context::<Self>::default().mul(&mut lhs, &rhs);
+        lhs
+    }
+}
+
+impl<const M: usize, const N: usize> MulAssign<Decimal<M>> for Decimal<N> {
+    fn mul_assign(&mut self, rhs: Decimal<M>) {
+        Context::<Self>::default().mul(self, &rhs);
+    }
+}
+
+impl<const M: usize, const N: usize> Rem<Decimal<M>> for Decimal<N> {
+    type Output = Self;
+
+    /// Note that this clones `self` to generate the output. For a
+    /// non-cloning method, use `Context::<N>::rem`.
+    fn rem(self, rhs: Decimal<M>) -> Self {
+        let mut lhs = self.clone();
+        Context::<Self>::default().rem(&mut lhs, &rhs);
+        lhs
+    }
+}
+
+impl<const M: usize, const N: usize> RemAssign<Decimal<M>> for Decimal<N> {
+    fn rem_assign(&mut self, rhs: Decimal<M>) {
+        Context::<Self>::default().rem(self, &rhs);
+    }
+}
+
+impl<const M: usize, const N: usize> Sub<Decimal<M>> for Decimal<N> {
+    type Output = Self;
+
+    /// Note that this clones `self` to generate the output. For a
+    /// non-cloning method, use `Context::<N>::sub`.
+    fn sub(self, rhs: Decimal<M>) -> Self {
+        let mut lhs = self.clone();
+        Context::<Self>::default().sub(&mut lhs, &rhs);
+        lhs
+    }
+}
+
+impl<const M: usize, const N: usize> SubAssign<Decimal<M>> for Decimal<N> {
+    fn sub_assign(&mut self, rhs: Decimal<M>) {
+        Context::<Self>::default().sub(self, &rhs);
+    }
+}
+
+impl<const M: usize, const N: usize> Sum<Decimal<M>> for Decimal<N> {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Decimal<M>>,
+    {
+        iter.map(|v| v).collect::<Vec<_>>().iter().sum()
+    }
+}
+
+impl<'a, const M: usize, const N: usize> Sum<&'a Decimal<M>> for Decimal<N> {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Decimal<M>>,
+    {
+        let mut cx = Context::<Self>::default();
+        cx.sum(iter)
+    }
+}
+
+impl<const M: usize, const N: usize> Product<Decimal<M>> for Decimal<N> {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Decimal<M>>,
+    {
+        iter.map(|v| v).collect::<Vec<_>>().iter().product()
+    }
+}
+
+impl<'a, const M: usize, const N: usize> Product<&'a Decimal<M>> for Decimal<N> {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Decimal<M>>,
+    {
+        let mut cx = Context::<Self>::default();
+        cx.product(iter)
+    }
+}
+
 impl<const N: usize> fmt::Debug for Decimal<N> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self, f)
@@ -757,20 +902,6 @@ impl<const N: usize> From<Decimal128> for Decimal<N> {
             );
         }
         d
-    }
-}
-
-impl<const N: usize> Neg for Decimal<N> {
-    type Output = Decimal<N>;
-
-    /// Note that this clones `self` to generate the negative value. For a
-    /// non-allocating method, use `Context::<N>::neg`.
-    fn neg(self) -> Decimal<N> {
-        let mut n = self.clone();
-        unsafe {
-            decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
-        }
-        n
     }
 }
 

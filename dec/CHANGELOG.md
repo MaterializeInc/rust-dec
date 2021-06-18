@@ -11,6 +11,19 @@ Versioning].
   arguments, allowing `Decimal` values of different precisions to be used in
   in the same operation.
 
+* Implement the following `std::ops` for `Decimal`:
+  - `Add`
+  - `AddAssign`
+  - `Div`
+  - `DivAssign`
+  - `Mul`
+  - `MulAssign`
+  - `Neg`
+  - `Rem`
+  - `RemAssign`
+  - `Sub`
+  - `SubAssign`
+
 ## 0.4.2 - 2021-06-04
 
 * Refactor `to_raw_parts` and `to_raw_parts` to use `&[u8]` to represent a
