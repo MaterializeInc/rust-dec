@@ -172,7 +172,7 @@ impl<const N: usize> Decimal<N> {
     /// The result is ordered with the least significant digits at index 0.
     ///
     /// [dpd]: http://speleotrove.com/decimal/dnnumb.html
-    pub(crate) fn coefficient_units(&self) -> &[u16] {
+    pub fn coefficient_units(&self) -> &[u16] {
         let units_len = Self::digits_to_lsu_elements_len(self.digits);
         &self.lsu[0..units_len]
     }
