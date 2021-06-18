@@ -5,7 +5,7 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## Unreleased
+## 0.4.3 - 2021-06-18
 
 * Genericize precision parameter for `Decimal` functions that take multiple
   arguments, allowing `Decimal` values of different precisions to be used in
