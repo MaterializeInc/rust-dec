@@ -71,6 +71,19 @@ impl fmt::Display for TryFromDecimalError {
 
 impl Error for TryFromDecimalError {}
 
+/// An error indicating a value cannot be precisely cast to a Decimal value, e.g.
+/// the cast requires truncating significant digits.
+#[derive(Debug, Eq, PartialEq)]
+pub struct TryIntoDecimalError;
+
+impl fmt::Display for TryIntoDecimalError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("value cannot be precisely expressed as decimal")
+    }
+}
+
+impl Error for TryIntoDecimalError {}
+
 /// An error indicating that a value's coefficient cannot be cast to a primitive
 /// type.
 #[derive(Debug, Eq, PartialEq)]

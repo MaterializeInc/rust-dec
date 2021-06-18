@@ -35,7 +35,7 @@ use crate::decimal32::Decimal32;
 use crate::decimal64::Decimal64;
 use crate::error::{
     InvalidCoefficientError, InvalidExponentError, InvalidPrecisionError, ParseDecimalError,
-    TryFromDecimalError,
+    TryFromDecimalError, TryIntoDecimalError,
 };
 
 fn validate_n(n: usize) {
@@ -594,16 +594,6 @@ impl<const N: usize> FromStr for Decimal<N> {
     }
 }
 
-impl<const N: usize> From<i32> for Decimal<N> {
-    fn from(n: i32) -> Decimal<N> {
-        let mut d = Decimal::default();
-        unsafe {
-            decnumber_sys::decNumberFromInt32(d.as_mut_ptr() as *mut decnumber_sys::decNumber, n);
-        }
-        d
-    }
-}
-
 /// Implements `std::convert::TryInto` semantics for `Decimal<N>` (represented
 /// by `$d`) into primitive integers (`$p`).
 macro_rules! __decnum_tryinto_primitive {
@@ -810,6 +800,16 @@ impl<const N: usize> From<f64> for Decimal<N> {
     }
 }
 
+impl<const N: usize> From<i32> for Decimal<N> {
+    fn from(n: i32) -> Decimal<N> {
+        let mut d = Decimal::default();
+        unsafe {
+            decnumber_sys::decNumberFromInt32(d.as_mut_ptr() as *mut decnumber_sys::decNumber, n);
+        }
+        d
+    }
+}
+
 impl<const N: usize> From<u32> for Decimal<N> {
     fn from(n: u32) -> Decimal<N> {
         let mut d = Decimal::default();
@@ -823,18 +823,50 @@ impl<const N: usize> From<u32> for Decimal<N> {
 impl<const N: usize> From<i64> for Decimal<N> {
     fn from(n: i64) -> Decimal<N> {
         let mut cx = Context::<Decimal<N>>::default();
-        let d = decimal_from_signed_int!(cx, n);
-        debug_assert!(!cx.status().any());
-        d
+        cx.from_i64(n)
     }
 }
 
 impl<const N: usize> From<u64> for Decimal<N> {
     fn from(n: u64) -> Decimal<N> {
         let mut cx = Context::<Decimal<N>>::default();
-        let d = decimal_from_unsigned_int!(cx, n);
-        debug_assert!(!cx.status().any());
-        d
+        cx.from_u64(n)
+    }
+}
+
+/// Generates a [`Decimal`] from an `i128` or fails if the result would be
+/// imprecise, e.g. has more than `N*3` digits of precision.
+///
+/// For an infallible version of this function, see
+/// [`Context<Decimal<N>>::from_i128`].
+impl<const N: usize> TryFrom<i128> for Decimal<N> {
+    type Error = TryIntoDecimalError;
+    fn try_from(n: i128) -> Result<Decimal<N>, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.from_i128(n);
+        return if cx.status().any() {
+            Err(TryIntoDecimalError)
+        } else {
+            Ok(d)
+        };
+    }
+}
+
+/// Generates a [`Decimal`] from a `u128` or fails if the result would be
+/// imprecise, e.g. has more than `N*3` digits of precision.
+///
+/// For an infallible version of this function, see
+/// [`Context<Decimal<N>>::from_u128`].
+impl<const N: usize> TryFrom<u128> for Decimal<N> {
+    type Error = TryIntoDecimalError;
+    fn try_from(n: u128) -> Result<Decimal<N>, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.from_u128(n);
+        return if cx.status().any() {
+            Err(TryIntoDecimalError)
+        } else {
+            Ok(d)
+        };
     }
 }
 
@@ -1117,6 +1149,26 @@ impl<const N: usize> Context<Decimal<N>> {
                 &mut self.inner,
             );
         }
+    }
+
+    /// Constructs a number from an `i32`.
+    pub fn from_i32(&mut self, n: i32) -> Decimal<N> {
+        Decimal::<N>::from(n)
+    }
+
+    /// Constructs a number from an `i32`.
+    pub fn from_u32(&mut self, n: u32) -> Decimal<N> {
+        Decimal::<N>::from(n)
+    }
+
+    /// Constructs a number from an `i64`.
+    pub fn from_i64(&mut self, n: i64) -> Decimal<N> {
+        decimal_from_signed_int!(self, n)
+    }
+
+    /// Constructs a number from a `u64`.
+    pub fn from_u64(&mut self, n: u64) -> Decimal<N> {
+        decimal_from_unsigned_int!(self, n)
     }
 
     /// Constructs a number from an `i128`.

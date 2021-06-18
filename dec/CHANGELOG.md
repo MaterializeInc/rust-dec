@@ -24,6 +24,10 @@ Versioning].
   - `Sub`
   - `SubAssign`
 
+* Implement remaining traits and functions for casting primitive integers to
+  `Decimal` values. These are only quality-of-life improvements and do not
+  provide any new functionality.
+
 ## 0.4.2 - 2021-06-04
 
 * Refactor `to_raw_parts` and `to_raw_parts` to use `&[u8]` to represent a
