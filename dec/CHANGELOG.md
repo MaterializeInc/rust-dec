@@ -28,6 +28,8 @@ Versioning].
   `Decimal` values. These are only quality-of-life improvements and do not
   provide any new functionality.
 
+* Make `Decimal::coefficient_units` public.
+
 ## 0.4.2 - 2021-06-04
 
 * Refactor `to_raw_parts` and `to_raw_parts` to use `&[u8]` to represent a
