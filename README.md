@@ -10,10 +10,10 @@ libdecnumber.
 ```
 # Cargo.toml
 [dependencies]
-dec = "0.4.2"
+dec = "0.4.3"
 ```
 
-**[View documentation.](https://docs.rs/dec/0.4.2/)**
+**[View documentation.](https://docs.rs/dec/0.4.3/)**
 
 ## decnumber-sys [![crates.io](https://img.shields.io/crates/v/decnumber-sys.svg)](https://crates.io/crates/decnumber-sys)
 
