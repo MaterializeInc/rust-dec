@@ -1267,7 +1267,7 @@ impl<const N: usize> Context<Decimal<N>> {
     /// function.
     #[cfg(target_pointer_width = "32")]
     pub fn try_into_isize(&mut self, d: Decimal<N>) -> Result<isize, TryFromDecimalError> {
-        let d = self.try_into_i32(n)?;
+        let d = self.try_into_i32(d)?;
         Ok(d as isize)
     }
 
@@ -1303,7 +1303,7 @@ impl<const N: usize> Context<Decimal<N>> {
     /// function.
     #[cfg(target_pointer_width = "32")]
     pub fn try_into_usize(&mut self, d: Decimal<N>) -> Result<usize, TryFromDecimalError> {
-        let d = self.try_into_u32(n)?;
+        let d = self.try_into_u32(d)?;
         Ok(d as usize)
     }
 
