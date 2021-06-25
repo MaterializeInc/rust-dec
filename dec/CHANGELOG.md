@@ -5,6 +5,10 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## 0.4.4 - 2021-06-25
+
+* Fix a bug that prevented compilation in 32-bit environments.
+
 ## 0.4.3 - 2021-06-18
 
 * Genericize precision parameter for `Decimal` functions that take multiple
