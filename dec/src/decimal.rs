@@ -598,6 +598,14 @@ impl<const N: usize> FromStr for Decimal<N> {
 /// by `$d`) into primitive integers (`$p`).
 macro_rules! __decnum_tryinto_primitive {
     ($p:ty, $cx:expr, $max_digits:literal, $d:expr, $allow_neg:expr) => {{
+        if $d.is_zero() {
+            return Ok(0);
+        }
+
+        if $d.exponent() > 0 {
+            $cx.rescale(&mut $d, &Decimal::<N>::zero());
+        }
+
         let mut fail = || -> TryFromDecimalError {
             let mut s = $cx.status();
             s.set_invalid_operation();
@@ -607,7 +615,7 @@ macro_rules! __decnum_tryinto_primitive {
 
         if $d.is_special()
             || $d.digits() > $max_digits
-            || $d.exponent() != 0
+            || $d.exponent() < 0
             || (!$allow_neg && $d.is_negative())
         {
             return Err(fail());
@@ -1285,7 +1293,7 @@ impl<const N: usize> Context<Decimal<N>> {
     ///
     /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
     /// function.
-    pub fn try_into_i64(&mut self, d: Decimal<N>) -> Result<i64, TryFromDecimalError> {
+    pub fn try_into_i64(&mut self, mut d: Decimal<N>) -> Result<i64, TryFromDecimalError> {
         decnum_tryinto_primitive_int!(i64, self, 19, d)
     }
 
@@ -1293,7 +1301,7 @@ impl<const N: usize> Context<Decimal<N>> {
     ///
     /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
     /// function.
-    pub fn try_into_i128(&mut self, d: Decimal<N>) -> Result<i128, TryFromDecimalError> {
+    pub fn try_into_i128(&mut self, mut d: Decimal<N>) -> Result<i128, TryFromDecimalError> {
         decnum_tryinto_primitive_int!(i128, self, 39, d)
     }
 
@@ -1321,7 +1329,7 @@ impl<const N: usize> Context<Decimal<N>> {
     ///
     /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
     /// function.
-    pub fn try_into_u64(&mut self, d: Decimal<N>) -> Result<u64, TryFromDecimalError> {
+    pub fn try_into_u64(&mut self, mut d: Decimal<N>) -> Result<u64, TryFromDecimalError> {
         decnum_tryinto_primitive_uint!(u64, self, 20, d)
     }
 
@@ -1329,7 +1337,7 @@ impl<const N: usize> Context<Decimal<N>> {
     ///
     /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
     /// function.
-    pub fn try_into_u128(&mut self, d: Decimal<N>) -> Result<u128, TryFromDecimalError> {
+    pub fn try_into_u128(&mut self, mut d: Decimal<N>) -> Result<u128, TryFromDecimalError> {
         decnum_tryinto_primitive_uint!(u128, self, 39, d)
     }
 
@@ -1641,7 +1649,7 @@ impl<const N: usize> Context<Decimal<N>> {
         }
     }
 
-    /// Rescales `n` to have an exponent of `exp`.
+    /// Rescales `lhs` to have an exponent of `rhs`.
     pub fn rescale<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
         unsafe {
             decnumber_sys::decNumberRescale(

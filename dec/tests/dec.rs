@@ -1500,6 +1500,7 @@ fn test_cx_into_i64() {
     inner(i64::MAX / 3);
     inner(i64::MIN / 7);
     inner(i64::MAX / 7);
+    inner(1627418240000);
 }
 
 #[test]
@@ -1513,6 +1514,7 @@ fn test_cx_into_u64() {
     inner(u64::MAX);
     inner(u64::MAX / 3);
     inner(u64::MAX / 7);
+    inner(1627418240000);
 }
 
 #[test]
@@ -1528,6 +1530,7 @@ fn test_cx_into_i128() {
     inner(i128::MAX / 3);
     inner(i128::MIN / 7);
     inner(i128::MAX / 7);
+    inner(1627418240000);
 }
 
 #[test]
@@ -1542,6 +1545,7 @@ fn test_cx_into_u128() {
     inner(u128::MAX / 3);
     inner(u128::MIN / 7);
     inner(u128::MAX / 7);
+    inner(1627418240000);
 }
 
 #[test]
@@ -1556,6 +1560,7 @@ fn test_decnum_tryinto_primitive() {
     let max_u64 = Decimal::<WIDTH>::from(u64::MAX);
     let min_i64 = Decimal::<WIDTH>::from(i64::MIN);
     let max_i64 = Decimal::<WIDTH>::from(i64::MAX);
+    let trailing_zeroes = Decimal::<WIDTH>::from(1627418240000i64);
     let min_u128 = cx.from_u128(u128::MIN);
     let max_u128 = cx.from_u128(u128::MAX);
     let min_i128 = cx.from_i128(i128::MIN);
@@ -1620,6 +1625,7 @@ fn test_decnum_tryinto_primitive() {
     inner(&max_u64);
     inner(&min_i64);
     inner(&max_i64);
+    inner(&trailing_zeroes);
     inner(&min_u128);
     inner(&max_u128);
     inner(&min_i128);
@@ -1640,43 +1646,10 @@ fn test_decnum_tryinto_primitive() {
     inner_expect_failure("-1.2");
     inner_expect_failure("1E-2");
     inner_expect_failure("-1E-2");
-    inner_expect_failure("2E10");
     inner_expect_failure("2E-10");
-    inner_expect_failure("9E40");
     inner_expect_failure("Infinity");
     inner_expect_failure("-Infinity");
     inner_expect_failure("NaN");
-
-    /// Values with non-zero exponents cannot be converted to primitive ints,
-    /// but quantizing the values to an exponent of 0 can convert them to valid
-    /// integer representations.
-    fn quantizable(s: i32, e: i32, valid: bool) {
-        let mut cx = Context::<Decimal<WIDTH>>::default();
-        let mut v = Decimal::<WIDTH>::from(s);
-        v.set_exponent(e);
-        assert!(u32::try_from(v).is_err());
-        assert!(i32::try_from(v).is_err());
-        assert!(u64::try_from(v).is_err());
-        assert!(i64::try_from(v).is_err());
-        assert!(u128::try_from(v).is_err());
-        assert!(i128::try_from(v).is_err());
-        cx.quantize(&mut v, &Decimal::<WIDTH>::zero());
-        if valid {
-            assert!(u32::try_from(v).is_ok());
-            assert!(i32::try_from(v).is_ok());
-            assert!(u64::try_from(v).is_ok());
-            assert!(i64::try_from(v).is_ok());
-            assert!(u128::try_from(v).is_ok());
-            assert!(i128::try_from(v).is_ok());
-        } else {
-            assert!(cx.status().invalid_operation());
-        }
-    }
-
-    quantizable(0, 2, true);
-    quantizable(1, 2, true);
-    quantizable(1, 43, false);
-    quantizable(9999, 99999999, false);
 }
 
 #[test]
