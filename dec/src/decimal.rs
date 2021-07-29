@@ -654,6 +654,46 @@ macro_rules! decnum_tryinto_primitive_uint {
 
 /// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
 /// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for i8 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<i8, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_i8(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for u8 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<u8, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_u8(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for i16 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<i16, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_i16(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
+impl<const N: usize> TryFrom<Decimal<N>> for u16 {
+    type Error = TryFromDecimalError;
+    fn try_from(n: Decimal<N>) -> Result<u16, Self::Error> {
+        let mut cx = Context::<Decimal<N>>::default();
+        cx.try_into_u16(n)
+    }
+}
+
+/// Refer to the comments on [`Context<Decimal<N>>::try_into_i32()`], which also apply to
+/// this trait.
 impl<const N: usize> TryFrom<Decimal<N>> for i32 {
     type Error = TryFromDecimalError;
     fn try_from(n: Decimal<N>) -> Result<i32, Self::Error> {
@@ -802,6 +842,30 @@ impl<const N: usize> From<f64> for Decimal<N> {
     fn from(n: f64) -> Decimal<N> {
         let mut cx = Context::<Decimal<N>>::default();
         cx.from_f64(n)
+    }
+}
+
+impl<const N: usize> From<i8> for Decimal<N> {
+    fn from(n: i8) -> Decimal<N> {
+        Decimal::<N>::from(i32::from(n))
+    }
+}
+
+impl<const N: usize> From<u8> for Decimal<N> {
+    fn from(n: u8) -> Decimal<N> {
+        Decimal::<N>::from(u32::from(n))
+    }
+}
+
+impl<const N: usize> From<i16> for Decimal<N> {
+    fn from(n: i16) -> Decimal<N> {
+        Decimal::<N>::from(i32::from(n))
+    }
+}
+
+impl<const N: usize> From<u16> for Decimal<N> {
+    fn from(n: u16) -> Decimal<N> {
+        Decimal::<N>::from(u32::from(n))
     }
 }
 
@@ -1231,6 +1295,42 @@ impl<const N: usize> Context<Decimal<N>> {
     /// ```
     pub fn from_u128(&mut self, n: u128) -> Decimal<N> {
         decimal_from_unsigned_int!(self, n)
+    }
+
+    /// Attempts to convert `d` to `u8` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_u8(&mut self, d: Decimal<N>) -> Result<u8, TryFromDecimalError> {
+        let i = self.try_into_u32(d)?;
+        u8::try_from(i).map_err(|_| TryFromDecimalError)
+    }
+
+    /// Attempts to convert `d` to `i8` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_i8(&mut self, d: Decimal<N>) -> Result<i8, TryFromDecimalError> {
+        let i = self.try_into_i32(d)?;
+        i8::try_from(i).map_err(|_| TryFromDecimalError)
+    }
+
+    /// Attempts to convert `d` to `u16` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_u16(&mut self, d: Decimal<N>) -> Result<u16, TryFromDecimalError> {
+        let i = self.try_into_u32(d)?;
+        u16::try_from(i).map_err(|_| TryFromDecimalError)
+    }
+
+    /// Attempts to convert `d` to `i16` or fails if not possible.
+    ///
+    /// Refer to the comments on [`Self::try_into_i32()`], which also apply to this
+    /// function.
+    pub fn try_into_i16(&mut self, d: Decimal<N>) -> Result<i16, TryFromDecimalError> {
+        let i = self.try_into_i32(d)?;
+        i16::try_from(i).map_err(|_| TryFromDecimalError)
     }
 
     /// Attempts to convert `d` to `i32` or fails if not possible. Note that

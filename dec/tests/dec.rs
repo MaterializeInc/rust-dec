@@ -1552,6 +1552,14 @@ fn test_cx_into_u128() {
 fn test_decnum_tryinto_primitive() {
     const WIDTH: usize = 14;
     let mut cx = Context::<Decimal<WIDTH>>::default();
+    let min_u8 = Decimal::<WIDTH>::from(u8::MIN);
+    let max_u8 = Decimal::<WIDTH>::from(u8::MAX);
+    let min_i8 = Decimal::<WIDTH>::from(i8::MIN);
+    let max_i8 = Decimal::<WIDTH>::from(i8::MAX);
+    let min_u16 = Decimal::<WIDTH>::from(u16::MIN);
+    let max_u16 = Decimal::<WIDTH>::from(u16::MAX);
+    let min_i16 = Decimal::<WIDTH>::from(i16::MIN);
+    let max_i16 = Decimal::<WIDTH>::from(i16::MAX);
     let min_u32 = Decimal::<WIDTH>::from(u32::MIN);
     let max_u32 = Decimal::<WIDTH>::from(u32::MAX);
     let min_i32 = Decimal::<WIDTH>::from(i32::MIN);
@@ -1569,12 +1577,44 @@ fn test_decnum_tryinto_primitive() {
     let scientific_notation = cx.parse("2E5").unwrap();
 
     let inner = |v: &Decimal<WIDTH>| {
+        let i_u8 = u8::try_from(*v);
+        let i_i8 = i8::try_from(*v);
+        let i_u16 = u16::try_from(*v);
+        let i_i16 = i16::try_from(*v);
         let i_u32 = u32::try_from(*v);
         let i_i32 = i32::try_from(*v);
         let i_u64 = u64::try_from(*v);
         let i_i64 = i64::try_from(*v);
         let i_u128 = u128::try_from(*v);
         let i_i128 = i128::try_from(*v);
+
+        // u8
+        if v >= &min_u8 && v <= &max_u8 {
+            assert!(i_u8.is_ok());
+        } else {
+            assert!(i_u8.is_err());
+        }
+
+        // i8
+        if v >= &min_i8 && v <= &max_i8 {
+            assert!(i_i8.is_ok());
+        } else {
+            assert!(i_i8.is_err());
+        }
+
+        // u16
+        if v >= &min_u16 && v <= &max_u16 {
+            assert!(i_u16.is_ok());
+        } else {
+            assert!(i_u16.is_err());
+        }
+
+        // i16
+        if v >= &min_i16 && v <= &max_i16 {
+            assert!(i_i16.is_ok());
+        } else {
+            assert!(i_i16.is_err());
+        }
 
         // u32
         if v >= &min_u32 && v <= &max_u32 {
@@ -1638,12 +1678,6 @@ fn test_decnum_tryinto_primitive() {
     fn inner_expect_failure(s: &str) {
         let mut cx = Context::<Decimal<WIDTH>>::default();
         let v = cx.parse(s).unwrap();
-        println!(
-            "v {:?}, v.exponent {}, v.digits {}",
-            v,
-            v.exponent(),
-            v.digits()
-        );
         assert!(u32::try_from(v).is_err());
         assert!(i32::try_from(v).is_err());
         assert!(u64::try_from(v).is_err());
