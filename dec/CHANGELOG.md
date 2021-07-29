@@ -5,6 +5,31 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## 0.4.5 - 2021-07-29
+
+* Change `Decimal`'s API for `TryFrom<Decimal<N>> for T` where `T` are primitive
+  integers. Previously, these conversions failed when the decimal's exponent was
+  not 0. The API now accepts any values without significant digits in the
+  value's fractional component, e.g. `1E10`, `2.00`, assuming the values fit
+  into the target type.
+
+  To re-implement the prior behavior, check the value's exponent before
+  performing the cast and return an error, e.g.
+
+  ```rust
+  pub fn cast_requiring_zero_exp<T, const N: usize>(
+      d: Decimal<N>,
+  ) -> Result<T, dec::error::TryFromDecimalError>
+  where
+      T: TryFrom<Decimal<N>, Error = dec::error::TryFromDecimalError>,
+  {
+      if d.exponent() != 0 {
+          return Err(dec::error::TryFromDecimalError);
+      }
+      T::try_from(d)
+  }
+  ```
+
 ## 0.4.4 - 2021-06-25
 
 * Fix a bug that prevented compilation in 32-bit environments.
