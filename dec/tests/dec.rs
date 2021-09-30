@@ -1977,3 +1977,38 @@ fn decnum_raw_parts() {
     inner("-Infinity", None);
     inner("NaN", None);
 }
+
+#[test]
+fn decnum_round_to_place() {
+    fn inner(s: &str, expect: &[&str]) {
+        const N: usize = 13;
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.parse(s).unwrap();
+        for (i, expect) in expect.iter().enumerate() {
+            let mut n = d.clone();
+            cx.round_to_place(&mut n, i + 1)
+                .expect("only valid test cases");
+            assert_eq!(&n.to_string(), expect);
+        }
+    }
+    inner("599.18", &["6E+2", "6.0E+2", "599", "599.2", "599.18"]);
+    inner("99.19", &["1E+2", "99"]);
+    inner("1009", &["1E+3", "1.0E+3", "1.01E+3", "1009"]);
+}
+
+#[test]
+fn decnum_round_reduce_to_place() {
+    fn inner(s: &str, expect: &[&str]) {
+        const N: usize = 13;
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.parse(s).unwrap();
+        for (i, expect) in expect.iter().enumerate() {
+            let mut n = d.clone();
+            cx.round_reduce_to_place(&mut n, i + 1)
+                .expect("only valid test cases");
+            assert_eq!(&n.to_string(), expect);
+        }
+    }
+    inner("599.18", &["6E+2", "6E+2", "599", "599.2", "599.18"]);
+    inner("1009", &["1E+3", "1E+3", "1.01E+3", "1009"]);
+}

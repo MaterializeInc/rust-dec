@@ -5,6 +5,13 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## Unreleased
+
+* Add `round_to_place` and `reduce_to_place` to `Decimal<N>`, which provide
+  "places from the left" rounding, akin to a shift right, round, and shift
+  left. `reduce_to_place` performs the operation, as expected, and
+  simultaneously performs a `reduce`.
+
 ## 0.4.5 - 2021-07-29
 
 * Change `Decimal`'s API for `TryFrom<Decimal<N>> for T` where `T` are primitive
