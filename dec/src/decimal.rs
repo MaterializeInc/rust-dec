@@ -1087,7 +1087,7 @@ impl<const N: usize> Context<Decimal<N>> {
 
     /// Sets the context's precision.
     ///
-    /// The precision must be greater than one and no greater than `N * 3`.
+    /// The precision must be at least one and no greater than `N * 3`.
     pub fn set_precision(&mut self, precision: usize) -> Result<(), InvalidPrecisionError> {
         if precision < 1 || precision > N * decnumber_sys::DECDPUN {
             return Err(InvalidPrecisionError);
@@ -1822,6 +1822,38 @@ impl<const N: usize> Context<Decimal<N>> {
         unsafe {
             decnumber_sys::decNumberToIntegralExact(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
         }
+    }
+
+    /// Rounds `n` at a given "place from the left" in the number, akin to a
+    /// shift right, round, and shift left.
+    ///
+    /// Note that this rounding will not drop integral digits (i.e those
+    /// representing values at least 1), but can round off fractional values.
+    ///
+    /// `place` must be at least one and no greater than `N * 3`, i.e. a valid
+    /// precision.
+    pub fn round_to_place(
+        &mut self,
+        n: &mut Decimal<N>,
+        place: usize,
+    ) -> Result<(), InvalidPrecisionError> {
+        let precision = self.precision();
+        self.set_precision(place)?;
+        self.plus(n);
+        self.set_precision(precision)
+    }
+
+    /// Identical to [`round_to_place`] but simultaneously performs a [`reduce`]
+    /// operation, as well.
+    pub fn round_reduce_to_place(
+        &mut self,
+        n: &mut Decimal<N>,
+        place: usize,
+    ) -> Result<(), InvalidPrecisionError> {
+        let precision = self.precision();
+        self.set_precision(place)?;
+        self.reduce(n);
+        self.set_precision(precision)
     }
 
     /// Shifts the digits of `lhs` by `rhs`, storing the result in `lhs`.
