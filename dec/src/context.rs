@@ -135,7 +135,7 @@ impl Rounding {
         }
     }
 
-    fn to_c(&self) -> c_uint {
+    fn to_c(self) -> c_uint {
         match self {
             Rounding::Ceiling => decnumber_sys::DEC_ROUND_CEILING,
             Rounding::Down => decnumber_sys::DEC_ROUND_DOWN,

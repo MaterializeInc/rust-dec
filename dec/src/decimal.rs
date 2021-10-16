@@ -40,7 +40,7 @@ use crate::error::{
 
 fn validate_n(n: usize) {
     // TODO(benesch): check this at compile time, when that becomes possible.
-    if n < 12 || n > 999_999_999 {
+    if !(12..=999_999_999).contains(&n) {
         panic!("Decimal<N>:: N is not in the range [12, 999999999]");
     }
 }
@@ -124,23 +124,27 @@ impl<const N: usize> Decimal<N> {
 
     /// Constructs a decimal number representing positive infinity.
     pub fn infinity() -> Decimal<N> {
-        let mut d = Decimal::default();
-        d.bits = decnumber_sys::DECINF;
-        d
+        Decimal {
+            bits: decnumber_sys::DECINF,
+            ..Decimal::default()
+        }
     }
 
     /// Constructs a decimal number representing a non-signaling NaN.
     pub fn nan() -> Decimal<N> {
-        let mut d = Decimal::default();
-        d.bits = decnumber_sys::DECNAN;
-        d
+        Decimal {
+            bits: decnumber_sys::DECNAN,
+            ..Decimal::default()
+        }
     }
 
     // Constructs a decimal number equal to 2^32. We use this value internally
     // to create decimals from primitive integers with more than 32 bits.
     fn two_pow_32() -> Decimal<N> {
-        let mut d = Decimal::default();
-        d.digits = 10;
+        let mut d = Decimal {
+            digits: 10,
+            ..Decimal::default()
+        };
         d.lsu[0..4].copy_from_slice(&[296, 967, 294, 4]);
         d
     }
@@ -471,10 +475,10 @@ impl<const N: usize> PartialEq for Decimal<N> {
 impl<const N: usize> Neg for Decimal<N> {
     type Output = Decimal<N>;
 
-    /// Note that this clones `self` to generate the negative value. For a
-    /// non-cloning method, use `Context::<N>::neg`.
+    /// Note that this copies `self` to generate the negative value. For a
+    /// non-copying method, use `Context::<N>::neg`.
     fn neg(self) -> Decimal<N> {
-        let mut n = self.clone();
+        let mut n = self;
         unsafe {
             decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
         }
@@ -488,7 +492,7 @@ impl<const M: usize, const N: usize> Add<Decimal<M>> for Decimal<N> {
     /// Note that this clones `self` to generate the output. For a
     /// non-cloning method, use `Context::<N>::add`.
     fn add(self, rhs: Decimal<M>) -> Self {
-        let mut lhs = self.clone();
+        let mut lhs = self;
         Context::<Self>::default().add(&mut lhs, &rhs);
         lhs
     }
@@ -506,7 +510,7 @@ impl<const M: usize, const N: usize> Div<Decimal<M>> for Decimal<N> {
     /// Note that this clones `self` to generate the output. For a
     /// non-cloning method, use `Context::<N>::div`.
     fn div(self, rhs: Decimal<M>) -> Self {
-        let mut lhs = self.clone();
+        let mut lhs = self;
         Context::<Self>::default().div(&mut lhs, &rhs);
         lhs
     }
@@ -524,7 +528,7 @@ impl<const M: usize, const N: usize> Mul<Decimal<M>> for Decimal<N> {
     /// Note that this clones `self` to generate the output. For a
     /// non-cloning method, use `Context::<N>::mul`.
     fn mul(self, rhs: Decimal<M>) -> Self {
-        let mut lhs = self.clone();
+        let mut lhs = self;
         Context::<Self>::default().mul(&mut lhs, &rhs);
         lhs
     }
@@ -542,7 +546,7 @@ impl<const M: usize, const N: usize> Rem<Decimal<M>> for Decimal<N> {
     /// Note that this clones `self` to generate the output. For a
     /// non-cloning method, use `Context::<N>::rem`.
     fn rem(self, rhs: Decimal<M>) -> Self {
-        let mut lhs = self.clone();
+        let mut lhs = self;
         Context::<Self>::default().rem(&mut lhs, &rhs);
         lhs
     }
@@ -560,7 +564,7 @@ impl<const M: usize, const N: usize> Sub<Decimal<M>> for Decimal<N> {
     /// Note that this clones `self` to generate the output. For a
     /// non-cloning method, use `Context::<N>::sub`.
     fn sub(self, rhs: Decimal<M>) -> Self {
-        let mut lhs = self.clone();
+        let mut lhs = self;
         Context::<Self>::default().sub(&mut lhs, &rhs);
         lhs
     }
@@ -577,7 +581,7 @@ impl<const M: usize, const N: usize> Sum<Decimal<M>> for Decimal<N> {
     where
         I: Iterator<Item = Decimal<M>>,
     {
-        iter.map(|v| v).collect::<Vec<_>>().iter().sum()
+        iter.collect::<Vec<_>>().iter().sum()
     }
 }
 
@@ -596,7 +600,7 @@ impl<const M: usize, const N: usize> Product<Decimal<M>> for Decimal<N> {
     where
         I: Iterator<Item = Decimal<M>>,
     {
-        iter.map(|v| v).collect::<Vec<_>>().iter().product()
+        iter.collect::<Vec<_>>().iter().product()
     }
 }
 
@@ -687,7 +691,7 @@ macro_rules! __decnum_tryinto_primitive {
             }
             Some(accum)
         }()
-        .ok_or_else(|| fail())
+        .ok_or_else(fail)
     }};
 }
 
@@ -964,11 +968,11 @@ impl<const N: usize> TryFrom<i128> for Decimal<N> {
     fn try_from(n: i128) -> Result<Decimal<N>, Self::Error> {
         let mut cx = Context::<Decimal<N>>::default();
         let d = cx.from_i128(n);
-        return if cx.status().any() {
+        if cx.status().any() {
             Err(TryIntoDecimalError)
         } else {
             Ok(d)
-        };
+        }
     }
 }
 
@@ -982,11 +986,11 @@ impl<const N: usize> TryFrom<u128> for Decimal<N> {
     fn try_from(n: u128) -> Result<Decimal<N>, Self::Error> {
         let mut cx = Context::<Decimal<N>>::default();
         let d = cx.from_u128(n);
-        return if cx.status().any() {
+        if cx.status().any() {
             Err(TryIntoDecimalError)
         } else {
             Ok(d)
-        };
+        }
     }
 }
 
@@ -1126,7 +1130,7 @@ impl<const N: usize> Context<Decimal<N>> {
     /// The maximum exponent must not be negative and no greater than
     /// 999,999,999.
     pub fn set_max_exponent(&mut self, e: isize) -> Result<(), InvalidExponentError> {
-        if e < 0 || e > 999999999 {
+        if !(0..999999999).contains(&e) {
             return Err(InvalidExponentError);
         }
         self.inner.emax = i32::try_from(e).map_err(|_| InvalidExponentError)?;
@@ -1753,7 +1757,7 @@ impl<const N: usize> Context<Decimal<N>> {
         I: Iterator<Item = &'a Decimal<M>>,
     {
         iter.fold(Decimal::<N>::from(1), |mut product, d| {
-            self.mul(&mut product, &d);
+            self.mul(&mut product, d);
             product
         })
     }
