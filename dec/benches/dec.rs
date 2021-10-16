@@ -13,169 +13,257 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::convert::TryFrom;
-
-use criterion::{criterion_group, criterion_main, Bencher, Criterion};
-use rand::{thread_rng, Rng};
+use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
+use itertools::Itertools as _;
+use rand::Rng;
+use rand_xoshiro::{rand_core::SeedableRng, Xoshiro128StarStar};
 
 use dec::{Context, Decimal, Decimal128, Decimal64};
 
-fn bench_decode_decimal64(d: Decimal64, b: &mut Bencher) {
-    b.iter_with_setup(|| d.clone(), |d| (d.exponent(), d.coefficient()))
+use std::{fmt, time::Duration};
+
+const TIME: Duration = Duration::from_secs(15);
+
+fn bench_to_string<T: fmt::Display>(slice: &[T]) {
+    for d in slice {
+        let string = d.to_string();
+        black_box(string);
+    }
 }
 
-fn bench_decode_decimal128(d: Decimal128, b: &mut Bencher) {
-    b.iter_with_setup(|| d.clone(), |d| (d.exponent(), d.coefficient()))
-}
+macro_rules! bench_fixed_impl {
+    ($bencher: ident, $size: expr, $type: ty, $group: expr) => {
+        let mut cx = Context::<$type>::default();
+        let mut rng = Xoshiro128StarStar::seed_from_u64(0xdeadbeef);
 
-pub fn bench_decode(c: &mut Criterion) {
-    // decode_decimal64
-    let mut rng = thread_rng();
-    let mut cx = Context::<Decimal64>::default();
-    let d64 = cx.from_i64(rng.gen());
-    c.bench_function("decode_decimal64", |b| bench_decode_decimal64(d64, b));
+        let vec: Vec<$type> = (0..$size)
+            .into_iter()
+            .map(|_| {
+                let array = rng.gen();
+                <$type>::from_ne_bytes(array)
+            })
+            .collect();
 
-    // decode_decimal128
-    let mut rng = thread_rng();
-    let mut cx = Context::<Decimal128>::default();
-    let d128 = cx.from_i128(rng.gen());
-    c.bench_function("decode_decimal128", |b| bench_decode_decimal128(d128, b));
-}
-
-pub fn bench_to_string(d: Decimal128, b: &mut Bencher) {
-    b.iter_with_setup(
-        || {
-            let mut cx = Context::<Decimal128>::default();
-            [-50, 0, 50]
-                .iter()
-                .map(|exp| {
-                    let mut d = d.clone();
-                    cx.set_exponent(&mut d, *exp);
-                    d
+        let mut group = $bencher.benchmark_group($group);
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("to_string", &vec, |b, vec| b.iter(|| bench_to_string(vec)));
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("to_standard_notation_string", &vec, |b, vec| {
+                b.iter(|| {
+                    for &d in vec {
+                        let string = d.to_standard_notation_string();
+                        black_box(string);
+                    }
                 })
-                .collect::<Vec<_>>()
-        },
-        |d| {
-            for d in d {
-                d.to_string();
-            }
-        },
-    )
-}
-
-pub fn bench_to_string_64(d: Decimal64, b: &mut Bencher) {
-    b.iter_with_setup(
-        || {
-            let mut cx = Context::<Decimal64>::default();
-            [-50, 0, 50]
-                .iter()
-                .map(|exp| {
-                    let mut d = d.clone();
-                    cx.set_exponent(&mut d, *exp);
-                    d
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("coefficient", &vec, |b, vec| {
+                b.iter(|| {
+                    for &d in vec {
+                        let coeff = d.coefficient();
+                        black_box(coeff);
+                    }
                 })
-                .collect::<Vec<_>>()
-        },
-        |d| {
-            for d in d {
-                d.to_string();
-            }
-        },
-    )
-}
-
-pub fn bench_standard_notation_string(d: Decimal128, b: &mut Bencher) {
-    b.iter_with_setup(
-        || {
-            let mut cx = Context::<Decimal128>::default();
-            [-50, 0, 50]
-                .iter()
-                .map(|exp| {
-                    let mut d = d.clone();
-                    cx.set_exponent(&mut d, *exp);
-                    d
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("exponent", &vec, |b, vec| {
+                b.iter(|| {
+                    for &d in vec {
+                        let exp = d.exponent();
+                        black_box(exp);
+                    }
                 })
-                .collect::<Vec<_>>()
-        },
-        |d| {
-            for d in d {
-                d.to_standard_notation_string();
-            }
-        },
-    )
-}
-
-pub fn bench_standard_notation_string_64(d: Decimal64, b: &mut Bencher) {
-    b.iter_with_setup(
-        || {
-            let mut cx = Context::<Decimal64>::default();
-            [-50, 0, 50]
-                .iter()
-                .map(|exp| {
-                    let mut d = d.clone();
-                    cx.set_exponent(&mut d, *exp);
-                    d
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE / 2))
+            .bench_with_input("add", &vec, |b, vec| {
+                b.iter(|| {
+                    for (&a, &b) in vec.iter().tuples::<(_, _)>() {
+                        let c = cx.add(a, b);
+                        black_box(c);
+                    }
                 })
-                .collect::<Vec<_>>()
-        },
-        |d| {
-            for d in d {
-                d.to_standard_notation_string();
-            }
-        },
-    )
-}
-
-pub fn bench_print(c: &mut Criterion) {
-    let mut rng = thread_rng();
-    let mut cx = Context::<Decimal128>::default();
-    let d128 = cx.from_i128(rng.gen());
-    c.bench_function("to_string_dec128", |b| bench_to_string(d128.clone(), b));
-    let mut rng = thread_rng();
-    let mut cx = Context::<Decimal128>::default();
-    let d128 = cx.from_i128(rng.gen());
-    c.bench_function("to_standard_notation_string_dec128", |b| {
-        bench_standard_notation_string(d128, b)
-    });
-    let mut rng = thread_rng();
-    let mut cx = Context::<Decimal64>::default();
-    let d64 = cx.from_i64(rng.gen());
-    c.bench_function("to_string_dec64", |b| bench_to_string_64(d64.clone(), b));
-    let mut rng = thread_rng();
-    let mut cx = Context::<Decimal64>::default();
-    let d64 = cx.from_i64(rng.gen());
-    c.bench_function("to_standard_notation_string_dec64", |b| {
-        bench_standard_notation_string_64(d64, b)
-    });
-}
-
-pub fn bench_try_into_primitive(d: Decimal<13>, b: &mut Bencher) {
-    b.iter_with_setup(
-        || {
-            [-1, 0, 1]
-                .iter()
-                .map(|exp| {
-                    let mut d = d.clone();
-                    d.set_exponent(*exp);
-                    d
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE / 2))
+            .bench_with_input("sub", &vec, |b, vec| {
+                b.iter(|| {
+                    for (&a, &b) in vec.iter().tuples::<(_, _)>() {
+                        let c = cx.sub(a, b);
+                        black_box(c);
+                    }
                 })
-                .collect::<Vec<_>>()
-        },
-        |v| {
-            for d in v {
-                let _ = i128::try_from(d);
-            }
-        },
-    )
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE / 2))
+            .bench_with_input("mul", &vec, |b, vec| {
+                b.iter(|| {
+                    for (&a, &b) in vec.iter().tuples::<(_, _)>() {
+                        let c = cx.mul(a, b);
+                        black_box(c);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE / 2))
+            .bench_with_input("div", &vec, |b, vec| {
+                b.iter(|| {
+                    for (&a, &b) in vec.iter().tuples::<(_, _)>() {
+                        let c = cx.div(a, b);
+                        black_box(c);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("abs", &vec, |b, vec| {
+                b.iter(|| {
+                    for &d in vec {
+                        let v = cx.abs(d);
+                        black_box(v);
+                    }
+                })
+            });
+        group.finish();
+    };
 }
 
-pub fn bench_tryinto_primitive(c: &mut Criterion) {
-    let mut rng = thread_rng();
-    let d: Decimal<13> = i32::into(rng.gen());
-    c.bench_function("bench_try_into_primitive", |b| {
-        bench_try_into_primitive(d.clone(), b)
-    });
+fn bench_fixed_size(bencher: &mut Criterion) {
+    const SIZE: u64 = 10_000;
+
+    bench_fixed_impl!(bencher, SIZE, Decimal64, "Decimal64");
+    bench_fixed_impl!(bencher, SIZE, Decimal128, "Decimal128");
 }
 
-criterion_group!(benches, bench_decode, bench_print, bench_tryinto_primitive);
+macro_rules! bench_dyn_impl {
+    ($bencher: ident, $size: expr, $type: ty, $group: expr) => {
+        let mut cx = Context::<$type>::default();
+        let mut rng = Xoshiro128StarStar::seed_from_u64(0xdeadbeef);
+
+        let vec: Vec<$type> = (0..$size)
+            .into_iter()
+            .map(|_| {
+                let array = rng.gen();
+                Decimal128::from_ne_bytes(array).into()
+            })
+            .collect();
+
+        let mut group = $bencher.benchmark_group($group);
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("to_string", &vec, |b, vec| b.iter(|| bench_to_string(vec)));
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("to_standard_notation_string", &vec, |b, vec| {
+                b.iter(|| {
+                    for &d in vec {
+                        let string = d.to_standard_notation_string();
+                        black_box(string);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("coefficient", &vec, |b, vec| {
+                b.iter(|| {
+                    for &(mut d) in vec {
+                        let res = d.coefficient::<$type>();
+                        let _ = black_box(res);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("exponent", &vec, |b, vec| {
+                b.iter(|| {
+                    for &d in vec {
+                        let exp = d.exponent();
+                        black_box(exp);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE / 2))
+            .bench_with_input("add", &vec, |b, vec| {
+                b.iter(|| {
+                    for (&(mut a), &b) in vec.iter().tuples::<(_, _)>() {
+                        let c = cx.add(&mut a, &b);
+                        black_box(c);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE / 2))
+            .bench_with_input("sub", &vec, |b, vec| {
+                b.iter(|| {
+                    for (&(mut a), &b) in vec.iter().tuples::<(_, _)>() {
+                        let c = cx.sub(&mut a, &b);
+                        black_box(c);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE / 2))
+            .bench_with_input("mul", &vec, |b, vec| {
+                b.iter(|| {
+                    for (&(mut a), &b) in vec.iter().tuples::<(_, _)>() {
+                        let c = cx.mul(&mut a, &b);
+                        black_box(c);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE / 2))
+            .bench_with_input("div", &vec, |b, vec| {
+                b.iter(|| {
+                    for (&(mut a), &b) in vec.iter().tuples::<(_, _)>() {
+                        let c = cx.div(&mut a, &b);
+                        black_box(c);
+                    }
+                })
+            });
+        group
+            .measurement_time(TIME)
+            .throughput(Throughput::Elements(SIZE))
+            .bench_with_input("abs", &vec, |b, vec| {
+                b.iter(|| {
+                    for &(mut d) in vec {
+                        let v = cx.abs(&mut d);
+                        black_box(v);
+                    }
+                })
+            });
+        group.finish();
+    };
+}
+
+fn bench_dyn_size(bencher: &mut Criterion) {
+    const SIZE: u64 = 10_000;
+
+    bench_dyn_impl!(bencher, SIZE, Decimal<12>, "Decimal<12>");
+    bench_dyn_impl!(bencher, SIZE, Decimal<16>, "Decimal<16>");
+}
+
+criterion_group!(benches, bench_fixed_size, bench_dyn_size);
 criterion_main!(benches);
