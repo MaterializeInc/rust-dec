@@ -28,6 +28,7 @@ use crate::decimal64::Decimal64;
 use crate::error::ParseDecimalError;
 
 /// A 32-bit decimal floating-point number.
+#[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct Decimal32 {
     pub(crate) inner: decnumber_sys::decSingle,
