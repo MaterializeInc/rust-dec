@@ -15,12 +15,13 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use itertools::Itertools as _;
-use rand::Rng;
-use rand_xoshiro::{rand_core::SeedableRng, Xoshiro128StarStar};
+use rand::{Rng, SeedableRng};
+use rand_xoshiro::Xoshiro128StarStar;
 
 use dec::{Context, Decimal, Decimal128, Decimal64};
 
-use std::{fmt, time::Duration};
+use std::fmt;
+use std::time::Duration;
 
 const TIME: Duration = Duration::from_secs(15);
 
