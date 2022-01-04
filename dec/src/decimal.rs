@@ -55,8 +55,11 @@ fn validate_n(n: usize) {
 ///
 /// `N` must be at least 12 and no greater than 999,999,999, though typically
 /// the stack size implies a smaller maximum for `N`. Due to limitations with
-/// constant generics it is not yet possible to enforce these restrictions
-/// at compile time, so they are checked at runtime.
+/// constant generics it is not yet possible to enforce these restrictions at
+/// compile time, so they are checked at runtime.
+///
+/// For more details about e.g. the struct's fields, see the [upstream
+/// documentation](http://speleotrove.com/decimal/dnnumb.html).
 #[repr(C)]
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
