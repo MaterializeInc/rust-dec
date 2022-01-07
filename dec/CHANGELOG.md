@@ -12,6 +12,13 @@ Versioning].
   left. `reduce_to_place` performs the operation, as expected, and
   simultaneously performs a `reduce`.
 
+* Refactor `to_raw_parts` and `to_raw_parts` to use `&[u16]` to represent a
+  `Decimal`'s `lsu`, largely reverting the change from
+  [0.4.2](#042---2021-06-04).
+
+  The reversion addresses an oversight that would corrupt values if the LSU's
+  data was moved between machines with different endianness.
+
 ## 0.4.5 - 2021-07-29
 
 * Change `Decimal`'s API for `TryFrom<Decimal<N>> for T` where `T` are primitive

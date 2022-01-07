@@ -205,8 +205,7 @@ impl<const N: usize> Decimal<N> {
     /// number of digits.
     ///
     /// This function is public and accepts a `u32` instead of a `Decimal` to
-    /// aid in decomposing ([`Self::to_raw_parts`]) and recomposing
-    /// ([`Self::from_raw_parts`]) values.
+    /// aid in recomposing ([`Self::from_raw_parts`]) values.
     pub fn digits_to_lsu_elements_len(digits: u32) -> usize {
         (usize::try_from(digits).unwrap() + decnumber_sys::DECDPUN - 1) / decnumber_sys::DECDPUN
     }
@@ -321,57 +320,35 @@ impl<const N: usize> Decimal<N> {
     /// converted to `u8`.
     ///
     /// The meaning of these parts are unspecified and subject to change.
-    pub fn to_raw_parts(&self) -> (u32, i32, u8, &[u8]) {
-        // SAFETY: `lsu` (returned by `coefficient_units()`) is a `&[u16]`, so
-        // each element can safely be transmuted into two `u8`s.
-        let (prefix, lsu, suffix) = unsafe { self.coefficient_units().align_to::<u8>() };
-        // The `u8` aligned version of the `lsu` should have twice as many
-        // elements as we expect for the `u16` version.
-        assert!(
-            lsu.len() == Self::digits_to_lsu_elements_len(self.digits) * 2,
-            "u8 version of LSU contained the wrong number of elements; expected {}, but got {}",
-            Self::digits_to_lsu_elements_len(self.digits) * 2,
-            lsu.len()
-        );
-        // There should be no unaligned elements in the prefix or suffix.
-        assert!(prefix.is_empty() && suffix.is_empty());
-        (self.digits, self.exponent, self.bits, lsu)
+    pub fn to_raw_parts(&self) -> (u32, i32, u8, &[u16]) {
+        (
+            self.digits,
+            self.exponent,
+            self.bits,
+            self.coefficient_units(),
+        )
     }
 
     /// Returns a `Decimal::<N>` with the supplied raw parts, which should be
-    /// generated using [`Decimal::to_raw_parts`].
-    ///
-    /// # Safety
-    ///
-    /// The raw parts must be valid according to the guarantees required by the
-    /// underlying C library, or undefined behavior can result. The easiest way
-    /// to uphold these guarantees is to ensure the raw parts originate from a
-    /// call to `Decimal::to_raw_parts`.
+    /// generated using [`Decimal::to_raw_parts`] on a machine with compatible
+    /// architecture.
     ///
     /// # Panics
     ///
-    /// If `lsu_u8` is not a slice that can be recomposed into a `&[16]` with
-    /// the number of digits implicitly specified by the `digits` parameter,
-    /// i.e. essentially `ceil(digits / decnumber_sys::DECDPUN)`. You can determine the appropriate
-    /// number of elements in `lsu_u8` using 2 *
-    /// [`Decimal::digits_to_lsu_elements_len`].
-    pub unsafe fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu_u8: &[u8]) -> Self {
+    /// If `lsu_in` is not a slice with the number of digits implicitly
+    /// specified by the `digits` parameter, i.e. essentially `ceil(digits /
+    /// decnumber_sys::DECDPUN)`.
+    pub fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu_in: &[u16]) -> Self {
+        let lsu_expected_len = Self::digits_to_lsu_elements_len(digits);
         assert!(
-            lsu_u8.len() == Self::digits_to_lsu_elements_len(digits) * 2,
-            "Expected lsu_u8 to have {} elements, but instead got {}",
-            Self::digits_to_lsu_elements_len(digits) * 2,
-            lsu_u8.len()
+            lsu_in.len() == lsu_expected_len,
+            "Expected lsu_in to have {} elements, but instead got {}",
+            lsu_expected_len,
+            lsu_in.len()
         );
 
         let mut lsu = [0; N];
-        for (i, v) in lsu_u8.chunks(2).enumerate() {
-            // Use native endian ordering, which matches the ordering generated
-            // for the `lsu`/`coefficient_units()` in `to_raw_parts`.
-            lsu[i] = u16::from_ne_bytes(
-                (*v).try_into()
-                    .expect("converting slice of 2 u8s to [u8; 2] to succeed"),
-            );
-        }
+        lsu[0..lsu_expected_len].copy_from_slice(&lsu_in);
 
         Decimal::<N> {
             digits,
