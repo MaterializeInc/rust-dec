@@ -7,6 +7,9 @@ Versioning].
 
 ## Unreleased
 
+* **Breaking change**: `from_raw_parts` now returns `Result<Decimal<N>,
+  InvalidRawPartsError<N>>`, whereas it previously did not error.
+
 * Add `round_to_place` and `reduce_to_place` to `Decimal<N>`, which provide
   "places from the left" rounding, akin to a shift right, round, and shift
   left. `reduce_to_place` performs the operation, as expected, and
@@ -18,6 +21,10 @@ Versioning].
 
   The reversion addresses an oversight that would corrupt values if the LSU's
   data was moved between machines with different endianness.
+
+* Include unpacked- and packed-[bcd]-compatible functions for decomposing
+  (`to_raw_parts_bcd_unpacked`, `to_raw_parts_bcd_packed`) and recomposing
+  (`from_raw_parts_bcd_unpacked`. `from_raw_parts_bcd_packed`) `Decimal` values.
 
 ## 0.4.5 - 2021-07-29
 
@@ -235,3 +242,5 @@ Initial release.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
+
+[bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal

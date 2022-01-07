@@ -111,5 +111,7 @@ pub use decimal::Decimal;
 pub use decimal128::Decimal128;
 pub use decimal32::Decimal32;
 pub use decimal64::Decimal64;
-pub use error::{InvalidExponentError, InvalidPrecisionError, ParseDecimalError};
+pub use error::{
+    InvalidExponentError, InvalidPrecisionError, InvalidRawPartsError, ParseDecimalError,
+};
 pub use ordered::OrderedDecimal;

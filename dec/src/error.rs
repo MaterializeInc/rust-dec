@@ -96,3 +96,48 @@ impl fmt::Display for InvalidCoefficientError {
 }
 
 impl Error for InvalidCoefficientError {}
+
+/// An error indicating a value cannot be reconsitituted from the provided raw parts.
+#[derive(Debug, Eq, PartialEq)]
+pub enum InvalidRawPartsError<const N: usize> {
+    /// Wow
+    Digits(u32),
+    /// Cool
+    Bit(u8),
+    /// Hello
+    Lsu(String, &'static str),
+    /// Wow
+    DigitsLsuMismatch(u32, String),
+}
+
+impl<const N: usize> fmt::Display for InvalidRawPartsError<N> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            InvalidRawPartsError::Digits(digits) => {
+                write!(
+                    f,
+                    "Decimal<{}> supports between 1 and {} digits; cannot set coefficient to value\
+                     with {} digits",
+                    N,
+                    N * decnumber_sys::DECDPUN,
+                    digits
+                )
+            }
+            InvalidRawPartsError::Bit(bit) => {
+                write!(f, "invalid bit {}", bit)
+            }
+            InvalidRawPartsError::Lsu(lit, reason) => {
+                write!(f, "invalid lsu, contains {}, but {}", lit, reason)
+            }
+            InvalidRawPartsError::DigitsLsuMismatch(digits, lit) => {
+                write!(
+                    f,
+                    "wrong number of digits specified ({}) for lsu value {:?}",
+                    digits, lit
+                )
+            }
+        }
+    }
+}
+
+impl<const N: usize> Error for InvalidRawPartsError<N> {}

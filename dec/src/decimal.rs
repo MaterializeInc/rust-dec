@@ -34,8 +34,8 @@ use crate::decimal128::Decimal128;
 use crate::decimal32::Decimal32;
 use crate::decimal64::Decimal64;
 use crate::error::{
-    InvalidCoefficientError, InvalidExponentError, InvalidPrecisionError, ParseDecimalError,
-    TryFromDecimalError, TryIntoDecimalError,
+    InvalidCoefficientError, InvalidExponentError, InvalidPrecisionError, InvalidRawPartsError,
+    ParseDecimalError, TryFromDecimalError, TryIntoDecimalError,
 };
 
 fn validate_n(n: usize) {
@@ -139,6 +139,15 @@ impl<const N: usize> Decimal<N> {
         d
     }
 
+    /// Determines whether or `bits` is a valid value from `decnumber_sys`.
+    fn validate_bits(bits: u8) -> Result<(), InvalidRawPartsError<N>> {
+        if !(decnumber_sys::DECNEG | decnumber_sys::DECSPECIAL) & bits == 0 {
+            Ok(())
+        } else {
+            Err(InvalidRawPartsError::Bit(bits))
+        }
+    }
+
     // Constructs a decimal number equal to 2^32. We use this value internally
     // to create decimals from primitive integers with more than 32 bits.
     fn two_pow_32() -> Decimal<N> {
@@ -156,8 +165,50 @@ impl<const N: usize> Decimal<N> {
         self.digits
     }
 
+    /// Determines whether a number of digits are valid.
+    fn validate_digits(digits: u32) -> Result<(), InvalidRawPartsError<N>> {
+        if (1..=(N * decnumber_sys::DECDPUN) as u32).contains(&digits) {
+            Ok(())
+        } else {
+            Err(InvalidRawPartsError::Digits(digits))
+        }
+    }
+
+    /// Returns an error if:
+    /// - There are any digits in positions greater the value specified by `self.digits`
+    /// - The most significant digit specified by `self.digits` is 0.
+    fn validate_lsu_digits(&self) -> Result<(), InvalidRawPartsError<N>> {
+        let lsu_expected_len = Self::digits_to_lsu_elements_len(self.digits);
+        let lsu_msd = self.lsu[lsu_expected_len - 1];
+
+        let msd_mismatch = match self.digits % 3 {
+            // Need 1 digit
+            1 => lsu_msd > 9,
+            // Need 2 digits
+            2 => !(10..100).contains(&lsu_msd),
+            // Need 3 digits
+            0 => lsu_msd < 100,
+            _ => unreachable!(),
+        };
+        let nonzero_mismatch = match self.lsu.iter().rposition(|x| x != &0) {
+            Some(idx) => idx != lsu_expected_len - 1,
+            None => self.digits != 1,
+        };
+
+        if msd_mismatch || nonzero_mismatch {
+            Err(InvalidRawPartsError::DigitsLsuMismatch(
+                self.digits,
+                format!("{:?}", self.lsu),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
     /// Returns the individual digits of the coefficient in 8-bit, unpacked
     /// [binary-coded decimal][bcd] format.
+    ///
+    /// The result is ordered with the most significant digit at index 0.
     ///
     /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
     pub fn coefficient_digits(&self) -> Vec<u8> {
@@ -165,7 +216,76 @@ impl<const N: usize> Decimal<N> {
         unsafe {
             decnumber_sys::decNumberGetBCD(self.as_ptr(), buf.as_mut_ptr() as *mut u8);
         };
+        assert_eq!(self.digits as usize, buf.len());
         buf
+    }
+
+    /// Replaces `self`'s coefficient with the values in `bcd`, which must be a
+    /// vec of unpacked [binary-coded decimal] digits with the most significant
+    /// digit at offset 0.
+    ///
+    /// For an example of the expected input to this function, see
+    /// `Decimal::coefficient_digits`.
+    ///
+    ///
+    /// # Errors
+    ///
+    /// - If the most significant digit of `bcd` is 0, unless its length is 1.
+    /// - If any element of `bcd` is not an unpacked binary-coded decimal value,
+    ///   i.e. is some value >= `10u8`.
+    /// - If `bcd.len()` is 0 or exceeds the maximum number of representable
+    ///   digits.
+    ///
+    /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
+    pub fn set_coefficient_digits(
+        &mut self,
+        mut bcd: Vec<u8>,
+    ) -> Result<(), InvalidRawPartsError<N>> {
+        if bcd.iter().any(|i| i > &9) {
+            return Err(InvalidRawPartsError::Lsu(
+                format!("{:?}", bcd),
+                "each element of bcd must be a single digit",
+            ));
+        }
+        self.digits = bcd.len().try_into().unwrap();
+        Self::validate_digits(self.digits)?;
+
+        unsafe {
+            decnumber_sys::decNumberSetBCD(
+                self.as_mut_ptr(),
+                bcd.as_mut_ptr() as *mut u8,
+                self.digits,
+            );
+        }
+
+        self.validate_lsu_digits()?;
+
+        Ok(())
+    }
+
+    /// Returns the value's coefficient in a packed [binary-coded decimal][bcd]
+    /// representation.
+    ///
+    /// The result is ordered with the most significant digits at index 0.
+    ///
+    /// Note that this packed representation uses "big endian" representation;
+    /// the more significant digit is in the more-significant nibble.
+    ///
+    /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
+    pub fn coefficient_bcd_packed(&self) -> Vec<u8> {
+        let mut bcd: Vec<u8> = self
+            .coefficient_digits()
+            .rchunks(2)
+            .map(|c| {
+                if c.len() == 2 {
+                    (c[0] << 4) + c[1]
+                } else {
+                    c[0]
+                }
+            })
+            .collect();
+        bcd.reverse();
+        bcd
     }
 
     /// Returns the digits of the coefficient in [`decNumberUnit`][dnu] format,
@@ -316,8 +436,7 @@ impl<const N: usize> Decimal<N> {
         Context::<Decimal128>::default().from_decimal(self)
     }
 
-    /// Returns the raw parts of this decimal, with the `u16` elements of `lsu`
-    /// converted to `u8`.
+    /// Returns the raw parts of this decimal.
     ///
     /// The meaning of these parts are unspecified and subject to change.
     pub fn to_raw_parts(&self) -> (u32, i32, u8, &[u16]) {
@@ -333,29 +452,231 @@ impl<const N: usize> Decimal<N> {
     /// generated using [`Decimal::to_raw_parts`] on a machine with compatible
     /// architecture.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// If `lsu_in` is not a slice with the number of digits implicitly
-    /// specified by the `digits` parameter, i.e. essentially `ceil(digits /
-    /// decnumber_sys::DECDPUN)`.
-    pub fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu_in: &[u16]) -> Self {
-        let lsu_expected_len = Self::digits_to_lsu_elements_len(digits);
-        assert!(
-            lsu_in.len() == lsu_expected_len,
-            "Expected lsu_in to have {} elements, but instead got {}",
-            lsu_expected_len,
-            lsu_in.len()
-        );
+    /// - If `bits` is not a valid bit from `decnumber_sys`.
+    /// - If `digits` is 0 or exceeds the maximum number of representable
+    ///   digits.
+    /// - If `lsu_in` contains a number of digits that differs from those
+    ///   specified by `digits`.
+    /// - If the most significant digit of `lsu_in` is 0, unless `digits == 1`.
+    pub fn from_raw_parts(
+        digits: u32,
+        exponent: i32,
+        bits: u8,
+        lsu_in: &[u16],
+    ) -> Result<Self, InvalidRawPartsError<N>> {
+        Self::validate_bits(bits)?;
+        Self::validate_digits(digits)?;
+        if lsu_in.iter().any(|i| i > &999) {
+            return Err(InvalidRawPartsError::Lsu(
+                format!("{:?}", lsu_in),
+                "each element of lsu must not exceed 3 digits",
+            ));
+        }
 
         let mut lsu = [0; N];
+        let lsu_expected_len = Self::digits_to_lsu_elements_len(digits);
+        if lsu_expected_len != lsu_in.len() {
+            return Err(InvalidRawPartsError::DigitsLsuMismatch(
+                digits,
+                format!("{:?}", lsu_in),
+            ));
+        }
         lsu[0..lsu_expected_len].copy_from_slice(&lsu_in);
 
-        Decimal::<N> {
+        let d = Decimal::<N> {
             digits,
             exponent,
             bits,
             lsu,
+        };
+
+        d.validate_lsu_digits()?;
+
+        Ok(d)
+    }
+
+    /// Returns the raw parts of this decimal, with `lsu` converted to its
+    /// "unpacked" [binary-coded decimal][bcd] representation.
+    ///
+    /// The meaning of these parts are unspecified and subject to change.
+    ///
+    /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
+    pub fn to_raw_parts_bcd_unpacked(&self) -> (u32, i32, u8, Vec<u8>) {
+        (
+            self.digits,
+            self.exponent,
+            self.bits,
+            self.coefficient_digits(),
+        )
+    }
+
+    /// Returns a `Decimal::<N>` with the supplied raw parts, which should be
+    /// generated using [`Decimal::to_raw_parts_unpacked`].
+    ///
+    /// # Errors
+    ///
+    /// - If `bits` is not a valid bit from `decnumber_sys`.
+    /// - If `digits` is 0 or exceeds the maximum number of representable
+    ///   digits.
+    /// - If `lsu_bcd` contains a number of digits that differs from those
+    ///   specified by `digits`.
+    /// - If the most significant digit of `lsu_in` is 0, unless `digits == 1`.
+    /// - If any element of `lsu_bcd` is not an unpacked binary-coded decimal
+    ///   value, i.e. is some value >= `10u8`.
+    pub fn from_raw_parts_bcd_unpacked(
+        digits: u32,
+        exponent: i32,
+        bits: u8,
+        lsu_bcd: Vec<u8>,
+    ) -> Result<Self, InvalidRawPartsError<N>> {
+        Self::validate_bits(bits)?;
+        Self::validate_digits(digits)?;
+
+        // `Self::set_coefficient_digits` requires the ability to set its own
+        // digits, so we validate the digits matches the lsu length here.
+        if digits as usize != lsu_bcd.len() {
+            return Err(InvalidRawPartsError::DigitsLsuMismatch(
+                digits,
+                format!("{:?}", lsu_bcd),
+            ));
         }
+
+        let mut d = Decimal::<N> {
+            digits,
+            exponent,
+            bits,
+            lsu: [0; N],
+        };
+
+        d.set_coefficient_digits(lsu_bcd)?;
+        Ok(d)
+    }
+
+    /// Returns the raw parts of this decimal, with `lsu` converted to its
+    /// "packed" [binary-coded decimal][bcd] representation.
+    ///
+    /// The meaning of these parts are unspecified and subject to change.
+    ///
+    /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
+    pub fn to_raw_parts_bcd_packed(&self) -> (u32, i32, u8, Vec<u8>) {
+        (
+            self.digits,
+            self.exponent,
+            self.bits,
+            self.coefficient_bcd_packed(),
+        )
+    }
+
+    /// Returns a `Decimal::<N>` with the supplied raw parts, which should be
+    /// generated using [`Decimal::to_raw_parts_bcd_packed`].
+    ///
+    /// # Errors
+    ///
+    /// - If `bits` is not a valid bit from `decnumber_sys`.
+    /// - If `digits` is 0 or exceeds the maximum number of representable
+    ///   digits.
+    /// - If the `lsu` derived from `packed_bcd` contains a number of digits
+    ///   that differs from those specified by `digits`.
+    /// - If the most significant digit of `lsu_in` is 0, unless `digits == 1`.
+    /// - If any element of `bcd` is not a packed [binary-coded decimal][bcd]
+    ///   value, i.e. any bytes' nibbles is > 9.
+    ///
+    /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
+    pub fn from_raw_parts_bcd_packed(
+        digits: u32,
+        exponent: i32,
+        bits: u8,
+        mut packed_bcd: Vec<u8>,
+    ) -> Result<Self, InvalidRawPartsError<N>> {
+        Self::validate_bits(bits)?;
+        Self::validate_digits(digits)?;
+
+        packed_bcd.reverse();
+
+        let (lsu, final_lsu_idx) = Self::bcd_packed_to_lsu(&packed_bcd)?;
+        let lsu_expected_len = Self::digits_to_lsu_elements_len(digits);
+        // We didn't fill enough of the lsu, for example `packed_bcd` was empty.
+        if lsu_expected_len > final_lsu_idx {
+            return Err(InvalidRawPartsError::DigitsLsuMismatch(
+                digits,
+                format!("{:?}", lsu),
+            ));
+        }
+
+        let d = Decimal::<N> {
+            digits,
+            exponent,
+            bits,
+            lsu,
+        };
+
+        d.validate_lsu_digits()?;
+        Ok(d)
+    }
+
+    /// Converts a packed [bcd] slice into a 3-digit binary array appropriate to
+    /// use as a `Decimal`'s `lsu`.
+    ///
+    /// This function expects:
+    /// - The digits to be ordered with the least-significant values at index 0.
+    /// - Each `u8` to contain two digits, one in each of its nibbles; the more
+    ///   significant digits in the more significant nibble.
+    ///
+    /// # Errors
+    ///
+    /// If any element of `bcd` is not a packed [binary-coded decimal][bcd]
+    /// value, i.e. one of the byte's nibbles is > 9.
+    ///
+    /// [bcd]: https://en.wikipedia.org/wiki/Binary-coded_decimal
+    fn bcd_packed_to_lsu(bcd: &[u8]) -> Result<([u16; N], usize), InvalidRawPartsError<N>> {
+        let split_convert_nibbles = |n| {
+            let upper = u16::from(n >> 4);
+            let lower = u16::from(n & 0b1111);
+            if upper > 9 || lower > 9 {
+                return Err(InvalidRawPartsError::Lsu(
+                    format!("{}, decomposed as {} and {}", n, upper, lower),
+                    "all elements of packed bcd must decompose into two nibbles whose \
+                    values are less than 10",
+                ));
+            }
+            Ok((upper, lower))
+        };
+
+        let mut lsu = [0; N];
+        let mut i = 0;
+        for c in bcd.chunks(3) {
+            let (mut high_byte, low_byte_h) = if c.len() == 1 {
+                (0, 0)
+            } else {
+                split_convert_nibbles(c[1])?
+            };
+
+            let (low_byte_m, low_byte_l) = split_convert_nibbles(c[0])?;
+            let low_byte = low_byte_h * 100 + low_byte_m * 10 + low_byte_l;
+            lsu[i] = low_byte;
+            i += 1;
+
+            // Do things in this odd order to increase the value of the subsequent assert.
+            if c.len() == 3 {
+                let (high_byte_h, high_byte_m) = split_convert_nibbles(c[2])?;
+                high_byte += high_byte_h * 100 + high_byte_m * 10;
+            }
+
+            // We only have to stop at the end of the lsu; we don't need to be
+            // concerned with the expected number of digits, which we check
+            // elsewhere.
+            if i == lsu.len() {
+                assert!(high_byte == 0);
+                break;
+            }
+
+            lsu[i] = high_byte;
+            i += 1;
+        }
+
+        Ok((lsu, i))
     }
 
     /// Returns a string of the number in standard notation, i.e. guaranteed to

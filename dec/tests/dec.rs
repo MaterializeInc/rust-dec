@@ -70,7 +70,6 @@ const ORDERING_TESTS: &[(&str, &str, Ordering)] = &[
 #[test]
 fn test_ordered_decimal64() -> Result<(), Box<dyn Error>> {
     for (lhs, rhs, expected) in ORDERING_TESTS {
-        println!("cmp({}, {}): expected {:?}", lhs, rhs, expected);
         let lhs: OrderedDecimal<Decimal64> = OrderedDecimal(lhs.parse()?);
         let rhs: OrderedDecimal<Decimal64> = OrderedDecimal(rhs.parse()?);
         assert_eq!(lhs.cmp(&rhs), *expected);
@@ -87,7 +86,6 @@ fn test_ordered_decimal64() -> Result<(), Box<dyn Error>> {
 #[test]
 fn test_ordered_decimal128() -> Result<(), Box<dyn Error>> {
     for (lhs, rhs, expected) in ORDERING_TESTS {
-        println!("cmp({}, {}): expected {:?}", lhs, rhs, expected);
         let lhs: OrderedDecimal<Decimal128> = OrderedDecimal(lhs.parse()?);
         let rhs: OrderedDecimal<Decimal128> = OrderedDecimal(rhs.parse()?);
         assert_eq!(lhs.cmp(&rhs), *expected);
@@ -104,7 +102,6 @@ fn test_ordered_decimal128() -> Result<(), Box<dyn Error>> {
 #[test]
 fn test_ordered_decimal() -> Result<(), Box<dyn Error>> {
     for (lhs, rhs, expected) in ORDERING_TESTS {
-        println!("cmp({}, {}): expected {:?}", lhs, rhs, expected);
         let lhs: OrderedDecimal<Decimal<12>> = OrderedDecimal(lhs.parse()?);
         let rhs: OrderedDecimal<Decimal<12>> = OrderedDecimal(rhs.parse()?);
         assert_eq!(lhs.cmp(&rhs), *expected);
@@ -1833,7 +1830,6 @@ fn test_decnum_try_from_f32() {
 fn test_decnum_try_from_f64() {
     const WIDTH: usize = 12;
     fn inner(f: f64, e: &str) {
-        println!("f {}", f);
         let mut cx = Context::<Decimal<WIDTH>>::default();
         let d = cx.from_f64(f);
         let e = cx.parse(e).unwrap();
@@ -1948,12 +1944,9 @@ fn test_decnum_coefficient() {
 
 #[test]
 fn decnum_raw_parts() {
-    fn inner(s: &str, o: Option<i128>) {
-        const N: usize = 13;
+    const N: usize = 13;
+    fn assert_eqs(d: &Decimal<N>, r: &Decimal<N>, o: Option<i128>) {
         let mut cx = Context::<Decimal<N>>::default();
-        let d = cx.parse(s).unwrap();
-        let (digits, exponent, bits, lsu) = d.to_raw_parts();
-        let r = Decimal::<N>::from_raw_parts(digits, exponent, bits, &lsu);
         if d.is_nan() {
             assert!(r.is_nan())
         } else {
@@ -1961,8 +1954,84 @@ fn decnum_raw_parts() {
         }
         if let Some(o) = o {
             let o = cx.from_i128(o);
-            assert_eq!(o, d);
+            assert_eq!(&o, d);
         }
+    }
+    fn raw_parts_ok(d: &Decimal<N>, o: Option<i128>) {
+        let (digits, exponent, bits, lsu) = d.to_raw_parts();
+        let r = Decimal::<N>::from_raw_parts(digits, exponent, bits, lsu).unwrap();
+        assert_eqs(&d, &r, o);
+    }
+    fn unpacked_ok(d: &Decimal<N>, o: Option<i128>) {
+        let (digits, exponent, bits, lsu) = d.to_raw_parts_bcd_unpacked();
+        let r = Decimal::<N>::from_raw_parts_bcd_unpacked(digits, exponent, bits, lsu).unwrap();
+        assert_eqs(&d, &r, o);
+    }
+    fn packed_ok(d: &Decimal<N>, o: Option<i128>) {
+        let (digits, exponent, bits, lsu) = d.to_raw_parts_bcd_packed();
+        let r = Decimal::<N>::from_raw_parts_bcd_packed(digits, exponent, bits, lsu).unwrap();
+        assert_eqs(&d, &r, o);
+    }
+    fn raw_parts_err(d: &Decimal<N>) {
+        let (digits, exponent, bits, lsu) = d.to_raw_parts();
+        let mut lsu = lsu.to_vec();
+        assert!(Decimal::<N>::from_raw_parts(digits - 1, exponent, bits, &lsu).is_err());
+        assert!(Decimal::<N>::from_raw_parts(digits + 1, exponent, bits, &lsu).is_err());
+        assert!(Decimal::<N>::from_raw_parts(digits, exponent, 1, &lsu).is_err());
+        assert!(Decimal::<N>::from_raw_parts(digits, exponent, bits, &lsu[1..]).is_err());
+        assert!(
+            Decimal::<N>::from_raw_parts(digits, exponent, bits, &lsu[..lsu.len() - 1]).is_err()
+        );
+        // Corrupt lsu
+        for i in 0..lsu.len() {
+            let old = lsu[i];
+            lsu[i] = u16::MAX;
+            assert!(Decimal::<N>::from_raw_parts(digits, exponent, bits, &lsu).is_err());
+            lsu[i] = old;
+        }
+    }
+    fn bcd_errs(d: &Decimal<N>) {
+        let test_funcs: &[(
+            &'static str,
+            for<'r> fn(&'r Decimal<N>) -> (u32, i32, u8, Vec<u8>),
+            fn(u32, i32, u8, Vec<u8>) -> Result<Decimal<N>, dec::InvalidRawPartsError<13_usize>>,
+        )] = &[
+            (
+                "unpacked",
+                Decimal::<N>::to_raw_parts_bcd_unpacked,
+                Decimal::<N>::from_raw_parts_bcd_unpacked,
+            ),
+            (
+                "packed",
+                Decimal::<N>::to_raw_parts_bcd_packed,
+                Decimal::<N>::from_raw_parts_bcd_packed,
+            ),
+        ];
+        for (_set, to_raw_parts, from_raw_parts) in test_funcs {
+            let (digits, exponent, bits, mut lsu) = to_raw_parts(d);
+            assert!(from_raw_parts(digits, exponent, 1, lsu.clone()).is_err());
+            assert!(from_raw_parts(digits - 1, exponent, bits, lsu.clone()).is_err());
+            assert!(from_raw_parts(digits + 1, exponent, bits, lsu.clone()).is_err());
+            assert!(from_raw_parts(digits, exponent, 1, lsu.clone()).is_err());
+            assert!(from_raw_parts(digits, exponent, bits, lsu[1..].to_vec()).is_err());
+            assert!(from_raw_parts(digits, exponent, bits, lsu[..lsu.len() - 1].to_vec()).is_err());
+            // corrupt lsu
+            for i in 0..lsu.len() {
+                let old = lsu[i];
+                lsu[i] = u8::MAX;
+                assert!(from_raw_parts(digits, exponent, bits, lsu.clone()).is_err());
+                lsu[i] = old;
+            }
+        }
+    }
+    fn inner(s: &str, o: Option<i128>) {
+        let mut cx = Context::<Decimal<N>>::default();
+        let d = cx.parse(s).unwrap();
+        raw_parts_ok(&d, o);
+        unpacked_ok(&d, o);
+        packed_ok(&d, o);
+        raw_parts_err(&d);
+        bcd_errs(&d);
     }
     inner("1", Some(1));
     inner("-1", Some(-1));
@@ -1971,6 +2040,8 @@ fn decnum_raw_parts() {
     inner("-987654321", Some(-987654321));
     inner(&i128::MAX.to_string(), Some(i128::MAX));
     inner(&i128::MIN.to_string(), Some(i128::MIN));
+    inner(&(i128::MAX / 7).to_string(), Some(i128::MAX / 7));
+    inner(&(i128::MIN / 3).to_string(), Some(i128::MIN / 3));
     inner("98765.4321", None);
     inner("-98765.4321", None);
     inner("Infinity", None);
