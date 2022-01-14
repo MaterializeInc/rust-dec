@@ -96,3 +96,16 @@ impl fmt::Display for InvalidCoefficientError {
 }
 
 impl Error for InvalidCoefficientError {}
+
+/// An error indicating that a value's coefficient cannot be cast to a primitive
+/// type.
+#[derive(Debug, Eq, PartialEq)]
+pub struct FromBcdError;
+
+impl fmt::Display for FromBcdError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("bcd or scale value invalid, either corrupted or out of acceptable range")
+    }
+}
+
+impl Error for FromBcdError {}
