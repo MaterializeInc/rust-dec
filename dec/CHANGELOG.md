@@ -7,6 +7,10 @@ Versioning].
 
 ## Unreleased
 
+* Add functions to take `Decimal` values to and from [packed binary-coded
+  decimals](https://en.wikipedia.org/wiki/Binary-coded_decimal) using the
+  [decPacked](http://speleotrove.com/decimal/dnpack.html) module.
+
 * Add `round_to_place` and `reduce_to_place` to `Decimal<N>`, which provide
   "places from the left" rounding, akin to a shift right, round, and shift
   left. `reduce_to_place` performs the operation, as expected, and
