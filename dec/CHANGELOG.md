@@ -5,7 +5,7 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
-## Unreleased
+## 0.4.6 - 2022-01-14
 
 * Add functions to take `Decimal` values to and from [packed binary-coded
   decimals](https://en.wikipedia.org/wiki/Binary-coded_decimal) using the
