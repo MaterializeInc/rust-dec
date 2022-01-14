@@ -1979,6 +1979,51 @@ fn decnum_raw_parts() {
 }
 
 #[test]
+fn decnum_raw_parts_bcd() {
+    fn inner(s: &str, o: Option<i128>) {
+        const N: usize = 13;
+        let mut cx = Context::<Decimal<N>>::default();
+        let mut d = cx.parse(s).unwrap();
+        let ret = d.to_packed_bcd();
+        if d.is_special() {
+            assert!(ret.is_none())
+        } else {
+            let (bcd, scale) = ret.unwrap();
+            let r = Decimal::<N>::from_packed_bcd(&bcd, scale).unwrap();
+            assert_eq!(d, r);
+            if let Some(o) = o {
+                let o = cx.from_i128(o);
+                assert_eq!(o, r);
+            }
+        }
+    }
+    inner("1", Some(1));
+    inner("-1", Some(-1));
+    inner("0.00", Some(0));
+    inner("987654321", Some(987654321));
+    inner("-987654321", Some(-987654321));
+    inner(&i128::MAX.to_string(), Some(i128::MAX));
+    inner(&i128::MIN.to_string(), Some(i128::MIN));
+    inner("98765.4321", None);
+    inner("-98765.4321", None);
+    inner("Infinity", None);
+    inner("-Infinity", None);
+    inner("NaN", None);
+
+    // Test malformed bcd input
+    let mut good_bcd = [50; 10];
+    // Valid sign nibble
+    good_bcd[9] = 28;
+    assert!(Decimal::<13>::from_packed_bcd(&good_bcd, 0).is_ok());
+    let mut bad_bcd = [28u8; 30];
+    // Valid sign nibble, too many digits
+    bad_bcd[29] = 28;
+    assert!(Decimal::<13>::from_packed_bcd(&bad_bcd, 0).is_err());
+    // Invalid sign nibble
+    assert!(Decimal::<13>::from_packed_bcd(&[50; 10], 0).is_err());
+}
+
+#[test]
 fn decnum_round_to_place() {
     fn inner(s: &str, expect: &[&str]) {
         const N: usize = 13;
