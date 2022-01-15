@@ -1953,7 +1953,7 @@ fn decnum_raw_parts() {
         let mut cx = Context::<Decimal<N>>::default();
         let d = cx.parse(s).unwrap();
         let (digits, exponent, bits, lsu) = d.to_raw_parts();
-        let r = Decimal::<N>::from_raw_parts(digits, exponent, bits, &lsu);
+        let r = Decimal::<N>::from_raw_parts(digits, exponent, bits, lsu);
         if d.is_nan() {
             assert!(r.is_nan())
         } else {

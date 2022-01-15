@@ -316,41 +316,20 @@ impl<const N: usize> Decimal<N> {
         Context::<Decimal128>::default().from_decimal(self)
     }
 
-    /// Returns the raw parts of this decimal, with the `u16` elements of `lsu`
-    /// converted to `u8`.
+    /// Returns the raw parts of this decimal.
     ///
-    /// The meaning of these parts are unspecified and subject to change.
-    pub fn to_raw_parts(&self) -> (u32, i32, u8, &[u16]) {
-        (
-            self.digits,
-            self.exponent,
-            self.bits,
-            self.coefficient_units(),
-        )
+    /// The meaning of these parts are unspecified and subject to change. The
+    /// only guarantee is that these parts can be supplied as arguments to the
+    /// [`Decimal::from_raw_parts`] to produce a decimal equivalent to the
+    /// original.
+    pub fn to_raw_parts(&self) -> (u32, i32, u8, [u16; N]) {
+        (self.digits, self.exponent, self.bits, self.lsu)
     }
 
     /// Returns a `Decimal::<N>` with the supplied raw parts, which should be
-    /// generated using [`Decimal::to_raw_parts`] on a machine with compatible
-    /// architecture.
-    ///
-    /// # Panics
-    ///
-    /// If `lsu_in` is not a slice with the number of digits implicitly
-    /// specified by the `digits` parameter, i.e. essentially `ceil(digits /
-    /// decnumber_sys::DECDPUN)`.
-    pub fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu_in: &[u16]) -> Self {
-        let lsu_expected_len = Self::digits_to_lsu_elements_len(digits);
-        assert!(
-            lsu_in.len() == lsu_expected_len,
-            "Expected lsu_in to have {} elements, but instead got {}",
-            lsu_expected_len,
-            lsu_in.len()
-        );
-
-        let mut lsu = [0; N];
-        lsu[0..lsu_expected_len].copy_from_slice(&lsu_in);
-
-        Decimal::<N> {
+    /// generated using [`Decimal::to_raw_parts`].
+    pub fn from_raw_parts(digits: u32, exponent: i32, bits: u8, lsu: [u16; N]) -> Self {
+        Decimal {
             digits,
             exponent,
             bits,
