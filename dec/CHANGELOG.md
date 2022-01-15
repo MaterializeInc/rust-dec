@@ -5,6 +5,12 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## 0.4.7 - 2022-01-15
+
+* Refactor `from_raw_parts` and `to_raw_parts` again to use `[u16; N]` rather
+  than `&[u16]` to represent `Decimal`'s `lsu`. This makes `from_raw_parts`
+  cheaper because the `lsu` length does not need validation.
+
 ## 0.4.6 - 2022-01-14
 
 * Add functions to take `Decimal` values to and from [packed binary-coded
