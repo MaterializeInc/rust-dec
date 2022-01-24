@@ -54,6 +54,7 @@ use crate::error::ParseDecimalError;
 /// [`OrderedFloat`]: https://docs.rs/ordered-float/2.0.1/ordered_float/struct.OrderedFloat.html
 /// [`ordered_float`]: https://crates.io/crates/ordered-float
 #[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct OrderedDecimal<D>(pub D);
 
