@@ -5,6 +5,10 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## 0.4.8 - 2022-02-05
+
+* Expose `TryFromDecimalError`.
+
 ## 0.4.7 - 2022-01-15
 
 * Refactor `from_raw_parts` and `to_raw_parts` again to use `[u16; N]` rather
