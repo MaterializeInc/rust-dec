@@ -28,9 +28,9 @@
   git push --tags
   ```
 
-* Create a new release on GitHub:
+* Create a new release on crates.io:
 
-* ```
+  ```
   (cd dec && cargo publish)
   (cd decnumber-sys && cargo publish)
   ```
