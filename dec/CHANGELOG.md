@@ -7,7 +7,9 @@ Versioning].
 
 ## Unreleased
 
-* No changes yet.
+* Implement `num_traits::{MulAdd, MulAddAssign, One, Zero}` for the
+  `Decimal`, `Decimal64`, and `Decimal128` types when the `num-traits` feature
+  is enabled.
 
 ## 0.4.8 - 2022-02-05
 
