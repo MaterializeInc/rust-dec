@@ -23,7 +23,9 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
 
-use dec::{Context, Decimal, Decimal128, Decimal32, Decimal64, OrderedDecimal, Status};
+use dec::{
+    d128, d32, d64, Context, Decimal, Decimal128, Decimal32, Decimal64, OrderedDecimal, Status,
+};
 
 #[derive(Default)]
 struct ValidatingHasher {
@@ -2056,4 +2058,11 @@ fn decnum_round_reduce_to_place() {
     }
     inner("599.18", &["6E+2", "6E+2", "599", "599.2", "599.18"]);
     inner("1009", &["1E+3", "1E+3", "1.01E+3", "1009"]);
+}
+
+#[test]
+fn literal_macros() {
+    assert_eq!(d32!(1.34).to_string(), "1.34");
+    assert!(d64!(NaN).is_nan());
+    assert!(d128!(-0).is_zero());
 }
