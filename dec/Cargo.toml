@@ -14,6 +14,7 @@ edition = "2018"
 [dependencies]
 decnumber-sys = { version = "0.1.5", path = "../decnumber-sys" }
 libc = "0.2.82"
+num-traits = { version = "0.2.14", optional = true }
 serde = { version = "1.0.124", features = ["derive"], optional = true }
 static_assertions = "1.1.0"
 

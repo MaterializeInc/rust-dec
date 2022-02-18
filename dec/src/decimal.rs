@@ -26,6 +26,8 @@ use std::ops::{
 use std::str::FromStr;
 
 use libc::c_char;
+#[cfg(feature = "num-traits")]
+use num_traits::{MulAdd, MulAddAssign, Pow, Zero};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -2000,5 +2002,49 @@ impl<const N: usize> Context<Decimal<N>> {
             decnumber_sys::decNumberPlus(n.as_mut_ptr(), m.as_ptr(), &mut self.inner);
         }
         n
+    }
+}
+
+#[cfg(feature = "num-traits")]
+impl<const N: usize> Zero for Decimal<N> {
+    #[inline]
+    fn zero() -> Self {
+        Decimal::<N>::zero()
+    }
+
+    #[inline]
+    fn is_zero(&self) -> bool {
+        self.is_zero()
+    }
+}
+
+#[cfg(feature = "num-traits")]
+impl<const N: usize, const L: usize, const M: usize> MulAdd<Decimal<L>, Decimal<M>> for Decimal<N> {
+    type Output = Self;
+
+    #[inline]
+    fn mul_add(mut self, a: Decimal<L>, b: Decimal<M>) -> Self::Output {
+        self.mul_add_assign(a, b);
+        self
+    }
+}
+
+#[cfg(feature = "num-traits")]
+impl<const N: usize, const L: usize, const M: usize> MulAddAssign<Decimal<L>, Decimal<M>>
+    for Decimal<N>
+{
+    fn mul_add_assign(&mut self, a: Decimal<L>, b: Decimal<M>) {
+        Context::<Self>::default().fma(self, &a, &b);
+    }
+}
+
+#[cfg(feature = "num-traits")]
+impl<const N: usize, const M: usize> Pow<Decimal<M>> for Decimal<N> {
+    type Output = Self;
+
+    fn pow(mut self, rhs: Decimal<M>) -> Self::Output {
+        Context::<Decimal<N>>::default().pow(&mut self, &rhs);
+
+        self
     }
 }

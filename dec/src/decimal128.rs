@@ -27,6 +27,8 @@ use std::ops::{
 use std::str::FromStr;
 
 use libc::c_char;
+#[cfg(feature = "num-traits")]
+use num_traits::{MulAdd, MulAddAssign, One, Zero};
 
 use crate::context::{Class, Context};
 use crate::decimal::Decimal;
@@ -1126,5 +1128,43 @@ impl Context<Decimal128> {
             decnumber_sys::decQuadXor(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
         }
         lhs
+    }
+}
+
+#[cfg(feature = "num-traits")]
+impl One for Decimal128 {
+    #[inline]
+    fn one() -> Self {
+        Self::ONE
+    }
+}
+
+#[cfg(feature = "num-traits")]
+impl Zero for Decimal128 {
+    #[inline]
+    fn zero() -> Self {
+        Self::ZERO
+    }
+
+    #[inline]
+    fn is_zero(&self) -> bool {
+        self.is_zero()
+    }
+}
+
+#[cfg(feature = "num-traits")]
+impl MulAdd for Decimal128 {
+    type Output = Self;
+
+    fn mul_add(self, a: Self, b: Self) -> Self::Output {
+        Context::<Self>::default().fma(self, a, b)
+    }
+}
+
+#[cfg(feature = "num-traits")]
+impl MulAddAssign for Decimal128 {
+    #[inline]
+    fn mul_add_assign(&mut self, a: Self, b: Self) {
+        *self = self.mul_add(a, b)
     }
 }
