@@ -24,7 +24,7 @@ use std::ops::{
 };
 
 use dec::{
-    d128, d32, d64, Context, Decimal, Decimal128, Decimal32, Decimal64, OrderedDecimal, Status,
+    d128, d32, d64, dec, Context, Decimal, Decimal128, Decimal32, Decimal64, OrderedDecimal, Status,
 };
 
 #[derive(Default)]
@@ -2065,4 +2065,5 @@ fn literal_macros() {
     assert_eq!(d32!(1.34).to_string(), "1.34");
     assert!(d64!(NaN).is_nan());
     assert!(d128!(-0).is_zero());
+    assert!(dec!(13, 0).is_zero());
 }
