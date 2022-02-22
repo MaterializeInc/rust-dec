@@ -5,9 +5,15 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## Unreleased
+
+* No changes yet.
+
 ## 0.4.8 - 2022-02-05
 
 * Expose `TryFromDecimalError`.
+
+* Add the `repr(transparent)` attribute to the `OrderedDecimal` type.
 
 ## 0.4.7 - 2022-01-15
 
