@@ -107,6 +107,8 @@ mod ordered;
 mod tests;
 
 pub use context::{Class, Context, Rounding, Status};
+#[cfg(feature = "serde")]
+pub use decimal::serde_decimal_from_non_float_primitives;
 pub use decimal::Decimal;
 pub use decimal128::Decimal128;
 pub use decimal32::Decimal32;

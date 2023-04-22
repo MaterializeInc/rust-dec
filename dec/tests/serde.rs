@@ -12,10 +12,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use std::convert::TryFrom;
+use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use serde_test::{assert_tokens, Token};
 
-use dec::Context;
+use dec::{Context, Decimal};
 
 #[test]
 fn test_serde() {
@@ -91,4 +95,60 @@ fn test_serde() {
             Token::StructEnd,
         ],
     );
+
+    for (json, err) in vec![
+        (
+            json!(1i32),
+            "invalid type: integer `1`, expected struct Decimal",
+        ),
+        (
+            json!(0.5f32),
+            "invalid type: floating point `0.5`, expected struct Decimal",
+        ),
+        (
+            json!("-1"),
+            "invalid type: string \"-1\", expected struct Decimal",
+        ),
+    ] {
+        assert_eq!(
+            serde_json::from_value::<Decimal<N>>(json)
+                .unwrap_err()
+                .to_string(),
+            err
+        );
+    }
+
+    #[repr(transparent)]
+    #[derive(Debug, PartialEq, PartialOrd, Deserialize, Serialize)]
+    pub struct PrimitiveDeserializableDecimal<const N: usize>(
+        #[serde(with = "dec::serde_decimal_from_non_float_primitives")] pub Decimal<N>,
+    );
+
+    for (json, dec) in vec![
+        (r#"-1"#, Decimal::try_from(-1i32).unwrap()),
+        (r#""6.0E+2""#, Decimal::from_str("6.0E+2").unwrap()),
+    ] {
+        let deserialized_value: PrimitiveDeserializableDecimal<N> =
+            serde_json::from_str(json).expect("deserialization works");
+        assert_eq!(deserialized_value.0, dec);
+    }
+
+    // Ensure incompatible values do not work.
+    for (json, err) in vec![
+        (
+            r#"true"#,
+            "invalid type: boolean `true`, expected struct Decimal or compatible primitive at line 1 column 4",
+        ),
+        (
+            r#"0.5"#,
+            "invalid type: floating point `0.5`, expected struct Decimal or compatible primitive at line 1 column 3",
+        ),
+    ] {
+        assert_eq!(
+            serde_json::from_str::<PrimitiveDeserializableDecimal<N>>(json)
+                .unwrap_err()
+                .to_string(),
+            err
+        );
+    }
 }

@@ -15,12 +15,14 @@ edition = "2018"
 decnumber-sys = { version = "0.1.5", path = "../decnumber-sys" }
 libc = "0.2.82"
 num-traits = { version = "0.2.14", optional = true }
+paste = "1.0.11"
 serde = { version = "1.0.124", features = ["derive"], optional = true }
 static_assertions = "1.1.0"
 
 [dev-dependencies]
 criterion = "0.3.0"
 rand = "0.7.3"
+serde_json = "1.0.89"
 serde_test = "1.0.117"
 
 [package.metadata.docs.rs]
