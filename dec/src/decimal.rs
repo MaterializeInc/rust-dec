@@ -77,6 +77,222 @@ pub struct Decimal<const N: usize> {
 }
 
 #[cfg(feature = "serde")]
+/// Provides a target for `serde(with = ...)` that permits deserializing `Decimal` values from
+/// primitive integers, `Strings`, or `str`.
+///
+/// ```rust
+/// use std::convert::TryFrom;
+/// use serde::{Deserialize, Serialize};
+/// const N: usize = 12;
+///
+/// #[repr(transparent)]
+/// #[derive(Debug, PartialEq, PartialOrd, Deserialize, Serialize)]
+/// pub struct PrimitiveDeserializableDecimal<const N: usize>(
+///     #[serde(with = "dec::serde_decimal_from_non_float_primitives")] pub dec::Decimal<N>,
+/// );
+///
+/// let v: PrimitiveDeserializableDecimal<N> =
+///           serde_json::from_str("-1").expect("deserialization works");
+///
+/// assert_eq!(dec::Decimal::try_from(-1i32).unwrap(), v.0);
+/// ```
+///
+/// Note that the feature provided by this crate is only compatible with self-describing input
+/// formats, such as `JSON`, as it relies on [`Deserialize::deserialize_any`](deserialize_any).
+///
+/// [deserialize_any]:
+///     https://docs.rs/serde/latest/serde/trait.Deserializer.html#tymethod.deserialize_any
+pub mod serde_decimal_from_non_float_primitives {
+    use std::convert::TryFrom;
+    use std::fmt;
+    use std::str::FromStr;
+
+    use serde::de::{self, MapAccess, SeqAccess, Visitor};
+    use serde::{Deserialize, Deserializer, Serialize};
+
+    use crate::Decimal;
+
+    /// Serialize `d` using the default, derivsed `Serialize` implementation.
+    pub fn serialize<S, const N: usize>(d: &Decimal<N>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+        Decimal<N>: Serialize,
+    {
+        Decimal::<N>::serialize(d, serializer)
+    }
+
+    /// Deserializes the value permitting a conversion to a `Decimal<N>` from primitive integers
+    /// (`i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `i128`, `u128`), `String`, and `str`.
+    pub fn deserialize<'de, D, const N: usize>(deserializer: D) -> Result<Decimal<N>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        enum Field {
+            Digits,
+            Exponent,
+            Bits,
+            Lsu,
+        }
+
+        impl<'de> Deserialize<'de> for Field {
+            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("`digits`, `exponent`, `bits`, or `lsu`")
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    where
+                        E: de::Error,
+                    {
+                        match value {
+                            "digits" => Ok(Field::Digits),
+                            "exponent" => Ok(Field::Exponent),
+                            "bits" => Ok(Field::Bits),
+                            "lsu" => Ok(Field::Lsu),
+                            _ => Err(de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
+
+        struct DecimalVisitor<const N: usize>;
+
+        macro_rules! deser_try_from {
+            ($($t:ty),*) => {
+                $(
+                    paste::paste! {
+                        fn [< visit_ $t >]<E>(self, value: $t) -> Result<Self::Value, E>
+                        where
+                            E: de::Error,
+                        {
+                            Decimal::try_from(value).map_err(serde::de::Error::custom)
+                        }
+                    }
+                )*
+            };
+        }
+
+        impl<'de, const N: usize> Visitor<'de> for DecimalVisitor<N> {
+            type Value = Decimal<N>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Decimal or compatible primitive")
+            }
+
+            deser_try_from!(i8, u8, i16, u16, i32, u32, i64, u64, i128, u128);
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Decimal::from_str(v).map_err(serde::de::Error::custom)
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Decimal::from_str(&v).map_err(serde::de::Error::custom)
+            }
+
+            fn visit_seq<V>(self, mut seq: V) -> Result<Decimal<N>, V::Error>
+            where
+                V: SeqAccess<'de>,
+            {
+                let digits = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+                let exponent = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                let bits = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(2, &self))?;
+
+                let lsu: Vec<u16> = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(3, &self))?;
+                let lsu = super::lsu_serde::check_deserialized_vec(lsu)?;
+
+                Ok(Decimal {
+                    digits,
+                    exponent,
+                    bits,
+                    lsu,
+                })
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Decimal<N>, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut digits = None;
+                let mut exponent = None;
+                let mut bits = None;
+                let mut lsu = None;
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Digits => {
+                            if digits.is_some() {
+                                return Err(de::Error::duplicate_field("digits"));
+                            }
+                            digits = Some(map.next_value()?);
+                        }
+                        Field::Exponent => {
+                            if exponent.is_some() {
+                                return Err(de::Error::duplicate_field("exponent"));
+                            }
+                            exponent = Some(map.next_value()?);
+                        }
+                        Field::Bits => {
+                            if bits.is_some() {
+                                return Err(de::Error::duplicate_field("bits"));
+                            }
+                            bits = Some(map.next_value()?);
+                        }
+                        Field::Lsu => {
+                            if lsu.is_some() {
+                                return Err(de::Error::duplicate_field("lsu"));
+                            }
+                            let lsu_deserialized: Vec<u16> = map.next_value()?;
+                            let lsu_deserialized =
+                                super::lsu_serde::check_deserialized_vec(lsu_deserialized)?;
+
+                            lsu = Some(lsu_deserialized);
+                        }
+                    }
+                }
+                let digits = digits.ok_or_else(|| de::Error::missing_field("digits"))?;
+                let exponent = exponent.ok_or_else(|| de::Error::missing_field("exponent"))?;
+                let bits = bits.ok_or_else(|| de::Error::missing_field("bits"))?;
+                let lsu = lsu.ok_or_else(|| de::Error::missing_field("lsu"))?;
+
+                Ok(Decimal {
+                    digits,
+                    exponent,
+                    bits,
+                    lsu,
+                })
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &["digits", "exponent", "bits", "lsu"];
+        deserializer.deserialize_any(DecimalVisitor)
+    }
+}
+
+#[cfg(feature = "serde")]
 mod lsu_serde {
     use std::convert::TryInto;
 
@@ -99,16 +315,20 @@ mod lsu_serde {
         D: serde::Deserializer<'de>,
     {
         let lsu = Vec::<u16>::deserialize(deserializer)?;
-        let lsu_len = lsu.len();
-        match lsu.try_into() {
-            Ok(lsu) => Ok(lsu),
-            Err(_) => {
-                return Err(Error::invalid_value(
-                    Unexpected::Other(&format!("&[u16] of length {}", lsu_len)),
-                    &format!("&[u16] of length {}", N).as_str(),
-                ))
-            }
-        }
+        check_deserialized_vec(lsu)
+    }
+
+    // Make this error checking shareable with manual deserialization impls.
+    pub fn check_deserialized_vec<const N: usize, E>(lsu: Vec<u16>) -> Result<[u16; N], E>
+    where
+        E: Error,
+    {
+        lsu.try_into().map_err(|e: Vec<u16>| {
+            Error::invalid_value(
+                Unexpected::Other(&format!("&[u16] of length {}", e.len())),
+                &format!("&[u16] of length {}", N).as_str(),
+            )
+        })
     }
 }
 

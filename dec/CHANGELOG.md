@@ -7,6 +7,14 @@ Versioning].
 
 ## Unreleased
 
+* Provide a `serde`-compatible module, `dec::serde_decimal_from_non_float_primitives`, to permit
+  deserializing `Decimal` values from primitive integers, `String`, and `str`.
+  
+  This feature relies on [`Deserialize::deserialize_any`](deserialize_any), so  is only appropriate
+  when using self-describing formats (e.g. JSON) as input.
+
+  Find more details on the module-level documentation.
+
 * Implement `num_traits::{MulAdd, MulAddAssign, One, Zero}` for the
   `Decimal`, `Decimal64`, and `Decimal128` types when the `num-traits` feature
   is enabled.
@@ -257,3 +265,4 @@ Initial release.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
+[deserialize_any]: https://docs.rs/serde/latest/serde/trait.Deserializer.html#tymethod.deserialize_any
