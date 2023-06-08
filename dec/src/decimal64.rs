@@ -182,7 +182,7 @@ impl Decimal64 {
         dpd >>= 10;
         r_1 += i64::from(unsafe { decnumber_sys::DPD2BINK[dpd as usize & dpd_mask] });
 
-        r += r_1 * 10_000_000_00;
+        r += r_1 * 1_000_000_000;
 
         // Digit 1
         let h = i64::from(unsafe { decnumber_sys::DECCOMBMSD[(dpd >> 18) as usize] });

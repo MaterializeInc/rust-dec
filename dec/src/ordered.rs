@@ -173,8 +173,8 @@ impl Hash for OrderedDecimal<Decimal128> {
 impl<const N: usize> Ord for OrderedDecimal<Decimal<N>> {
     fn cmp(&self, other: &Self) -> Ordering {
         let mut cx = Context::<Decimal<N>>::default();
-        let mut lhs = self.0.clone();
-        let mut rhs = other.0.clone();
+        let mut lhs = self.0;
+        let mut rhs = other.0;
         cx.reduce(&mut lhs);
         cx.reduce(&mut rhs);
         match cx.partial_cmp(&lhs, &rhs) {
@@ -210,7 +210,7 @@ impl<const N: usize> Hash for OrderedDecimal<Decimal<N>> {
         } else if self.0.is_zero() {
             Decimal::<N>::zero()
         } else {
-            let mut d = self.0.clone();
+            let mut d = self.0;
             Context::<Decimal<N>>::default().reduce(&mut d);
             d
         };
