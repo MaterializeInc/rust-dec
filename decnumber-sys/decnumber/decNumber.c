@@ -3467,7 +3467,8 @@ uByte * decNumberGetBCD(const decNumber *dn, uByte *bcd) {
       cut--;
       if (cut>0) continue;         // more in this unit
       up++;
-      u=*up;
+      if ((ub - 1) >= bcd)
+        u=*up;
       cut=DECDPUN;
       }
   #endif

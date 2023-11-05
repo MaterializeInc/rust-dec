@@ -403,7 +403,7 @@ impl fmt::Debug for Decimal64 {
 
 impl fmt::Display for Decimal64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-       let mut buf = MaybeUninit::<[c_char; decnumber_sys::DECDOUBLE_String]>::uninit();
+        let mut buf = ['\0'; decnumber_sys::DECDOUBLE_String];
         let c_str = unsafe {
             if f.alternate() {
                 decnumber_sys::decDoubleToEngString(&self.inner, buf.as_mut_ptr() as *mut c_char);
@@ -597,6 +597,7 @@ impl<'a> Product<&'a Decimal64> for Decimal64 {
 impl Default for Context<Decimal64> {
     fn default() -> Context<Decimal64> {
         let mut ctx = MaybeUninit::<decnumber_sys::decContext>::uninit();
+        
         let ctx = unsafe {
             decnumber_sys::decContextDefault(ctx.as_mut_ptr(), decnumber_sys::DEC_INIT_DECDOUBLE);
             ctx.assume_init()

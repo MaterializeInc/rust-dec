@@ -444,7 +444,7 @@ impl fmt::Debug for Decimal128 {
 
 impl fmt::Display for Decimal128 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut buf = MaybeUninit::<[c_char; decnumber_sys::DECQUAD_String]>::uninit();
+        let mut buf = ['\0'; decnumber_sys::DECQUAD_String];
         let c_str = unsafe {
             if f.alternate() {
                 decnumber_sys::decQuadToEngString(&self.inner, buf.as_mut_ptr() as *mut c_char);
