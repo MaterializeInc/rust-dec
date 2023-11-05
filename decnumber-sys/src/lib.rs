@@ -108,7 +108,7 @@ pub const DECSPECIAL: u8 = DECINF | DECNAN | DECSNAN;
 pub const DECDPUN: usize = 3;
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct decNumber {
     pub digits: i32,
     pub exponent: i32,
