@@ -167,7 +167,7 @@ impl fmt::Debug for Decimal32 {
 
 impl fmt::Display for Decimal32 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut buf = MaybeUninit::<[c_char; decnumber_sys::DECDOUBLE_String]>::uninit();
+        let mut buf = ['\0'; decnumber_sys::DECDOUBLE_String];
         let c_str = unsafe {
             if f.alternate() {
                 decnumber_sys::decSingleToEngString(&self.inner, buf.as_mut_ptr() as *mut c_char);
