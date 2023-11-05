@@ -715,8 +715,9 @@ impl<const N: usize> Neg for Decimal<N> {
     /// non-cloning method, use `Context::<N>::neg`.
     fn neg(self) -> Decimal<N> {
         let mut n = self.clone();
+        let n_ptr = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberCopyNegate(n.as_mut_ptr(), n.as_ptr());
+            decnumber_sys::decNumberCopyNegate(n_ptr, n_ptr);
         }
         n
     }
@@ -1428,64 +1429,50 @@ impl<const N: usize> Context<Decimal<N>> {
     /// `n` is negative, in which case it has the same effect as
     /// [`Context::<Decimal<N>>::minus`].
     pub fn abs(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberAbs(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberAbs(n, n, &mut self.inner);
         }
     }
 
     /// Adds `lhs` and `rhs`, storing the result in `lhs`.
     pub fn add<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberAdd(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberAdd(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Carries out the digitwise logical and of `lhs` and `rhs`, storing
     /// the result in `lhs`.
     pub fn and<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberAnd(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberAnd(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Divides `lhs` by `rhs`, storing the result in `lhs`.
     pub fn div<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberDivide(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberDivide(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Divides `lhs` by `rhs`, storing the integer part of the result in `lhs`.
     pub fn div_integer<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberDivideInteger(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberDivideInteger(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Raises *e* to the power of `n`, storing the result in `n`.
     pub fn exp(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberExp(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberExp(n, n, &mut self.inner);
         }
     }
 
@@ -1500,14 +1487,9 @@ impl<const N: usize> Context<Decimal<N>> {
         y: &Decimal<L>,
         z: &Decimal<M>,
     ) {
+        let x = x.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberFMA(
-                x.as_mut_ptr(),
-                x.as_ptr(),
-                y.as_ptr(),
-                z.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberFMA(x, x, y.as_ptr(), z.as_ptr(), &mut self.inner);
         }
     }
 
@@ -1781,30 +1763,34 @@ impl<const N: usize> Context<Decimal<N>> {
     /// Computes the digitwise logical inversion of `n`, storing the result in
     /// `n`.
     pub fn invert(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberInvert(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberInvert(n, n, &mut self.inner);
         }
     }
 
     /// Computes the natural logarithm of `n`, storing the result in `n`.
     pub fn ln(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberLn(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberLn(n, n, &mut self.inner);
         }
     }
 
     /// Computes the base-10 logarithm of `n`, storing the result in `n`.
     pub fn log10(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberLog10(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberLog10(n, n, &mut self.inner);
         }
     }
 
     /// Computes the adjusted exponent of the number, according to IEEE 754
     /// rules.
     pub fn logb(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberLogB(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberLogB(n, n, &mut self.inner);
         }
     }
 
@@ -1813,26 +1799,18 @@ impl<const N: usize> Context<Decimal<N>> {
     /// The comparison is performed using the same rules as for
     /// [`total_cmp`](Context::<Decimal128>::total_cmp).
     pub fn max<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberMax(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberMax(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Places whichever of `lhs` and `rhs` has the larger absolute value in
     /// `lhs`.
     pub fn max_abs<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberMaxMag(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberMaxMag(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
@@ -1841,26 +1819,18 @@ impl<const N: usize> Context<Decimal<N>> {
     /// The comparison is performed using the same rules as for
     /// [`total_cmp`](Context::<Decimal128>::total_cmp).
     pub fn min<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberMin(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberMin(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Places whichever of `lhs` and `rhs` has the smaller absolute value in
     /// `lhs`.
     pub fn min_abs<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberMinMag(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberMinMag(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
@@ -1873,13 +1843,9 @@ impl<const N: usize> Context<Decimal<N>> {
 
     /// Multiples `lhs` by `rhs`, storing the result in `lhs`.
     pub fn mul<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberMultiply(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberMultiply(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
@@ -1930,13 +1896,9 @@ impl<const N: usize> Context<Decimal<N>> {
     /// Carries out the digitwise logical or of `lhs` and `rhs`, storing
     /// the result in `lhs`.
     pub fn or<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberOr(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberOr(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
@@ -1975,15 +1937,17 @@ impl<const N: usize> Context<Decimal<N>> {
 
     /// Adds `n` to zero, storing the result in `n`.
     pub fn plus(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberPlus(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberPlus(n, n, &mut self.inner);
         }
     }
 
     /// Raises `x` to the power of `y`, storing the result in `x`.
     pub fn pow<const M: usize>(&mut self, x: &mut Decimal<N>, y: &Decimal<M>) {
+        let x = x.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberPower(x.as_mut_ptr(), x.as_ptr(), y.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberPower(x, x, y.as_ptr(), &mut self.inner);
         }
     }
 
@@ -2001,66 +1965,52 @@ impl<const N: usize> Context<Decimal<N>> {
     /// Rounds or pads `lhs` so that it has the same exponent as `rhs`, storing
     /// the result in `lhs`.
     pub fn quantize<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberQuantize(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberQuantize(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Reduces `n`'s coefficient to its shortest possible form without
     /// changing the value of the result, storing the result in `n`.
     pub fn reduce(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberReduce(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberReduce(n, n, &mut self.inner);
         }
     }
 
     /// Integer-divides `lhs` by `rhs`, storing the remainder in `lhs`.
     pub fn rem<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberRemainder(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberRemainder(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Like [`rem`](Context::<Decimal<N>>::rem), but uses the IEEE 754
     /// rules for remainder operations.
     pub fn rem_near<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberRemainderNear(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberRemainderNear(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Rescales `lhs` to have an exponent of `rhs`.
     pub fn rescale<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberRescale(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberRescale(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
     /// Rounds the number to an integral value using the rounding mode in the
     /// context.
     pub fn round(&mut self, n: &mut Decimal<N>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberToIntegralExact(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberToIntegralExact(n, n, &mut self.inner);
         }
     }
 
@@ -2104,13 +2054,9 @@ impl<const N: usize> Context<Decimal<N>> {
     /// `rhs` specifies the number of positions to shift, and must be a finite
     /// integer.
     pub fn shift<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberShift(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberShift(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
@@ -2122,13 +2068,9 @@ impl<const N: usize> Context<Decimal<N>> {
     /// `rhs` specifies the number of positions to rotate, and must be a finite
     /// integer.
     pub fn rotate<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberRotate(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberRotate(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
@@ -2141,20 +2083,17 @@ impl<const N: usize> Context<Decimal<N>> {
 
     /// Computes the square root of `n`, storing the result in `n`.
     pub fn sqrt<const M: usize>(&mut self, n: &mut Decimal<M>) {
+        let n = n.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberSquareRoot(n.as_mut_ptr(), n.as_ptr(), &mut self.inner);
+            decnumber_sys::decNumberSquareRoot(n, n, &mut self.inner);
         }
     }
 
     /// Subtracts `rhs` from `lhs`, storing the result in `lhs`.
     pub fn sub<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberSubtract(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberSubtract(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
@@ -2179,6 +2118,7 @@ impl<const N: usize> Context<Decimal<N>> {
         rhs: &Decimal<M>,
     ) -> Ordering {
         validate_n(N);
+
         let mut d = MaybeUninit::<Decimal<N>>::uninit();
         let d = unsafe {
             decnumber_sys::decNumberCompareTotal(
@@ -2202,13 +2142,9 @@ impl<const N: usize> Context<Decimal<N>> {
     /// Carries out the digitwise logical xor of `lhs` and `rhs`, storing
     /// the result in `lhs`.
     pub fn xor<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
+        let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberXor(
-                lhs.as_mut_ptr(),
-                lhs.as_ptr(),
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberXor(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
