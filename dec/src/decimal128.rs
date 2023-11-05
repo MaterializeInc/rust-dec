@@ -242,8 +242,9 @@ impl Decimal128 {
     /// Returns an equivalent number whose encoding is guaranteed to be
     /// canonical.
     pub fn canonical(mut self) -> Decimal128 {
+        let inner = &mut self.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadCanonical(&mut self.inner, &self.inner);
+            decnumber_sys::decQuadCanonical(inner, inner);
         }
         self
     }
@@ -343,8 +344,9 @@ impl Decimal128 {
     /// For a brief description of the ordering, consult [`f32::total_cmp`].
     pub fn total_cmp(&self, rhs: &Decimal128) -> Ordering {
         let mut d = Decimal128::ZERO;
+        let d_inner = &mut d.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadCompareTotal(&mut d.inner, &self.inner, &rhs.inner);
+            decnumber_sys::decQuadCompareTotal(d_inner, d_inner, &rhs.inner);
         }
         if d.is_positive() {
             Ordering::Greater
@@ -764,16 +766,18 @@ impl Context<Decimal128> {
     ///
     /// The returned result will be canonical.
     pub fn abs(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadAbs(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadAbs(n_inner, n_inner, &mut self.inner);
         }
         n
     }
 
     /// Adds `lhs` and `rhs`.
     pub fn add(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadAdd(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadAdd(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -783,16 +787,18 @@ impl Context<Decimal128> {
     /// The operands must be valid for logical operations.
     /// See [`Decimal128::is_logical`].
     pub fn and(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadAnd(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadAnd(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
 
     /// Divides `lhs` by `rhs`.
     pub fn div(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadDivide(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadDivide(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -805,13 +811,9 @@ impl Context<Decimal128> {
     ///
     /// [`Status::division_impossible`]: crate::context::Status::division_impossible
     pub fn div_integer(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadDivideInteger(
-                &mut lhs.inner,
-                &lhs.inner,
-                &rhs.inner,
-                &mut self.inner,
-            );
+            decnumber_sys::decQuadDivideInteger(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -821,8 +823,9 @@ impl Context<Decimal128> {
     /// The multiplication is carried out first and is exact, so this operation
     /// only has the one, final rounding.
     pub fn fma(&mut self, mut x: Decimal128, y: Decimal128, z: Decimal128) -> Decimal128 {
+        let x_inner = &mut x.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadFMA(&mut x.inner, &x.inner, &y.inner, &z.inner, &mut self.inner);
+            decnumber_sys::decQuadFMA(x_inner, x_inner, &y.inner, &z.inner, &mut self.inner);
         }
         x
     }
@@ -832,8 +835,9 @@ impl Context<Decimal128> {
     /// The operand must be valid for logical operation.
     /// See [`Decimal128::is_logical`].
     pub fn invert(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadInvert(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadInvert(n_inner, n_inner, &mut self.inner);
         }
         n
     }
@@ -841,8 +845,9 @@ impl Context<Decimal128> {
     /// Computes the adjusted exponent of the number, according to IEEE 754
     /// rules.
     pub fn logb(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadLogB(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadLogB(n_inner, n_inner, &mut self.inner);
         }
         n
     }
@@ -852,16 +857,18 @@ impl Context<Decimal128> {
     /// The comparison is performed using the same rules as for
     /// [`Decimal128::total_cmp`].
     pub fn max(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadMax(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadMax(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
 
     /// Returns whichever of `lhs` and `rhs` has the largest absolute value.
     pub fn max_abs(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadMaxMag(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadMaxMag(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -871,32 +878,37 @@ impl Context<Decimal128> {
     /// The comparison is performed using the same rules as for
     /// [`Decimal128::total_cmp`].
     pub fn min(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
+
         unsafe {
-            decnumber_sys::decQuadMin(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadMin(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
 
     /// Returns whichever of `lhs` and `rhs` has the largest absolute value.
     pub fn min_abs(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadMinMag(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadMinMag(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
 
     /// Subtracts `n` from zero.
     pub fn minus(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadMinus(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadMinus(n_inner, n_inner, &mut self.inner);
         }
         n
     }
 
     /// Multiplies `lhs` by `rhs`.
     pub fn mul(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadMultiply(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadMultiply(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -905,8 +917,9 @@ impl Context<Decimal128> {
     ///
     /// This operation follows the IEEE 754 rules for the *nextDown* operation.
     pub fn next_minus(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadNextMinus(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadNextMinus(n_inner, n_inner, &mut self.inner);
         }
         n
     }
@@ -915,8 +928,9 @@ impl Context<Decimal128> {
     ///
     /// This operation follows the IEEE 754 rules for the *nextUp* operation.
     pub fn next_plus(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadNextPlus(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadNextPlus(n_inner, n_inner, &mut self.inner);
         }
         n
     }
@@ -925,8 +939,9 @@ impl Context<Decimal128> {
     ///
     /// This operation follows the IEEE 754 rules for the *nextAfter* operation.
     pub fn next_toward(&mut self, mut x: Decimal128, y: Decimal128) -> Decimal128 {
+        let x_inner = &mut x.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadNextToward(&mut x.inner, &x.inner, &y.inner, &mut self.inner);
+            decnumber_sys::decQuadNextToward(x_inner, x_inner, &y.inner, &mut self.inner);
         }
         x
     }
@@ -955,16 +970,18 @@ impl Context<Decimal128> {
 
     /// Adds `n` to zero.
     pub fn plus(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadPlus(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadPlus(n_inner, n_inner, &mut self.inner);
         }
         n
     }
 
     /// Rounds or pads `lhs` so that it has the same exponent as `rhs`.
     pub fn quantize(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadQuantize(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadQuantize(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -975,8 +992,9 @@ impl Context<Decimal128> {
     /// This removes all possible trailing zeros; some may remain when the
     /// number is very close to the most positive or most negative number.
     pub fn reduce(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadReduce(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadReduce(n_inner, n_inner, &mut self.inner);
         }
         n
     }
@@ -984,13 +1002,9 @@ impl Context<Decimal128> {
     /// Integer-divides `lhs` by `rhs` and returns the remainder from the
     /// division.
     pub fn rem(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadRemainder(
-                &mut lhs.inner,
-                &lhs.inner,
-                &rhs.inner,
-                &mut self.inner,
-            );
+            decnumber_sys::decQuadRemainder(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -998,13 +1012,9 @@ impl Context<Decimal128> {
     /// Like [`rem`](Context::<Decimal128>::rem), but uses the IEEE 754
     /// rules for remainder operations.
     pub fn rem_near(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadRemainderNear(
-                &mut lhs.inner,
-                &lhs.inner,
-                &rhs.inner,
-                &mut self.inner,
-            );
+            decnumber_sys::decQuadRemainderNear(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -1019,8 +1029,9 @@ impl Context<Decimal128> {
     ///
     /// If `lhs` is infinity, the result is infinity of the same sign.
     pub fn rotate(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadRotate(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadRotate(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -1028,16 +1039,18 @@ impl Context<Decimal128> {
     /// Rounds the number to an integral value using the rounding mode in
     /// the context.
     pub fn round(&mut self, mut n: Decimal128) -> Decimal128 {
+        let n_inner = &mut n.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadToIntegralExact(&mut n.inner, &n.inner, &mut self.inner);
+            decnumber_sys::decQuadToIntegralExact(n_inner, n_inner, &mut self.inner);
         }
         n
     }
 
     /// Multiplies `x` by 10<sup>`y`</sup>.
     pub fn scaleb(&mut self, mut x: Decimal128, y: Decimal128) -> Decimal128 {
+        let x_inner = &mut x.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadScaleB(&mut x.inner, &x.inner, &y.inner, &mut self.inner);
+            decnumber_sys::decQuadScaleB(x_inner, x_inner, &y.inner, &mut self.inner);
         }
         x
     }
@@ -1059,8 +1072,9 @@ impl Context<Decimal128> {
     ///
     /// If `lhs` is infinity, the result is infinity of the same sign.
     pub fn shift(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadShift(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadShift(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -1102,8 +1116,9 @@ impl Context<Decimal128> {
 
     /// Subtracts `rhs` from `lhs`.
     pub fn sub(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadSubtract(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadSubtract(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -1113,8 +1128,9 @@ impl Context<Decimal128> {
     /// The operands must be valid for logical operations.
     /// See [`Decimal128::is_logical`].
     pub fn or(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadOr(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadOr(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
@@ -1124,8 +1140,9 @@ impl Context<Decimal128> {
     /// The operands must be valid for logical operations.
     /// See [`Decimal128::is_logical`].
     pub fn xor(&mut self, mut lhs: Decimal128, rhs: Decimal128) -> Decimal128 {
+        let lhs_inner = &mut lhs.inner as *mut decnumber_sys::decQuad;
         unsafe {
-            decnumber_sys::decQuadXor(&mut lhs.inner, &lhs.inner, &rhs.inner, &mut self.inner);
+            decnumber_sys::decQuadXor(lhs_inner, lhs_inner, &rhs.inner, &mut self.inner);
         }
         lhs
     }
