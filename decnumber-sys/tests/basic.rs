@@ -31,7 +31,7 @@ fn simple_addition() {
             &mut ctx,
         );
     }
-    let a_as_ptr = & mut a as *mut decNumber;
+    let a_as_ptr = &mut a as *mut decNumber;
     unsafe {
         decnumber_sys::decNumberAdd(a_as_ptr, a_as_ptr, &mut b, &mut ctx);
     }
