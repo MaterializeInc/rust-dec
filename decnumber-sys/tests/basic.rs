@@ -16,16 +16,24 @@ fn simple_addition() {
     ctx.traps = 0;
     ctx.digits = 3;
 
-    let mut a = MaybeUninit::<decNumber>::uninit();
-    let mut b = MaybeUninit::<decNumber>::uninit();
-    let (mut a, mut b) = unsafe {
-        decnumber_sys::decNumberFromString(a.as_mut_ptr(), c_str!("1.23").as_ptr(), &mut ctx);
-        decnumber_sys::decNumberFromString(b.as_mut_ptr(), c_str!("4.71").as_ptr(), &mut ctx);
-        (a.assume_init(), b.assume_init())
-    };
+    let mut a = decNumber::default();
+    let mut b = decNumber::default();
 
     unsafe {
-        decnumber_sys::decNumberAdd(&mut a, &mut a, &mut b, &mut ctx);
+        decnumber_sys::decNumberFromString(
+            &mut a as *mut decNumber,
+            c_str!("1.23").as_ptr(),
+            &mut ctx,
+        );
+        decnumber_sys::decNumberFromString(
+            &mut b as *mut decNumber,
+            c_str!("4.71").as_ptr(),
+            &mut ctx,
+        );
+    }
+    let a_as_ptr = & mut a as *mut decNumber;
+    unsafe {
+        decnumber_sys::decNumberAdd(a_as_ptr, a_as_ptr, &mut b, &mut ctx);
     }
 
     let mut buf = vec![0_u8; 5];
