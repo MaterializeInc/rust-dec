@@ -497,14 +497,13 @@ impl<const N: usize> Decimal<N> {
     /// Quantums are considered to match if the numbers have the same exponent,
     /// are both NaNs, or both infinite.
     pub fn quantum_matches(&self, rhs: &Decimal<N>) -> bool {
-        let mut d = MaybeUninit::<Decimal<N>>::uninit();
-        let d = unsafe {
+        let mut d = Decimal::<N>::zero();
+        unsafe {
             decnumber_sys::decNumberSameQuantum(
                 d.as_mut_ptr() as *mut decnumber_sys::decNumber,
                 self.as_ptr(),
                 rhs.as_ptr(),
             );
-            d.assume_init()
         };
         if d.is_zero() {
             false
@@ -625,6 +624,7 @@ impl<const N: usize> Decimal<N> {
             return self.to_string();
         }
         let digits = self.coefficient_digits();
+
         let digits = {
             let i = digits
                 .iter()
@@ -1913,15 +1913,14 @@ impl<const N: usize> Context<Decimal<N>> {
         rhs: &Decimal<M>,
     ) -> Option<Ordering> {
         validate_n(N);
-        let mut d = MaybeUninit::<Decimal<N>>::uninit();
-        let d = unsafe {
+        let mut d = Decimal::<N>::zero();
+        unsafe {
             decnumber_sys::decNumberCompare(
                 d.as_mut_ptr() as *mut decnumber_sys::decNumber,
                 lhs.as_ptr(),
                 rhs.as_ptr(),
                 &mut self.inner,
-            );
-            d.assume_init()
+            )
         };
         if d.is_nan() {
             None
@@ -2118,16 +2117,14 @@ impl<const N: usize> Context<Decimal<N>> {
         rhs: &Decimal<M>,
     ) -> Ordering {
         validate_n(N);
-
-        let mut d = MaybeUninit::<Decimal<N>>::uninit();
-        let d = unsafe {
+        let mut d = Decimal::<N>::zero();
+        unsafe {
             decnumber_sys::decNumberCompareTotal(
                 d.as_mut_ptr() as *mut decnumber_sys::decNumber,
                 lhs.as_ptr(),
                 rhs.as_ptr(),
                 &mut self.inner,
-            );
-            d.assume_init()
+            )
         };
         debug_assert!(!d.is_special());
         if d.is_negative() {
