@@ -345,7 +345,7 @@ impl Decimal128 {
     pub fn total_cmp(&self, rhs: &Decimal128) -> Ordering {
         let mut d = Decimal128::ZERO;
         unsafe {
-            decnumber_sys::decQuadCompareTotal(&mut d.inner, & self.inner, &rhs.inner);
+            decnumber_sys::decQuadCompareTotal(&mut d.inner, &self.inner, &rhs.inner);
         }
         if d.is_positive() {
             Ordering::Greater
