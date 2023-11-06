@@ -597,7 +597,7 @@ impl<'a> Product<&'a Decimal64> for Decimal64 {
 impl Default for Context<Decimal64> {
     fn default() -> Context<Decimal64> {
         let mut ctx = MaybeUninit::<decnumber_sys::decContext>::uninit();
-        
+
         let ctx = unsafe {
             decnumber_sys::decContextDefault(ctx.as_mut_ptr(), decnumber_sys::DEC_INIT_DECDOUBLE);
             ctx.assume_init()

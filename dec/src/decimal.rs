@@ -1456,12 +1456,7 @@ impl<const N: usize> Context<Decimal<N>> {
     pub fn div<const M: usize>(&mut self, lhs: &mut Decimal<N>, rhs: &Decimal<M>) {
         let lhs = lhs.as_mut_ptr();
         unsafe {
-            decnumber_sys::decNumberDivide(
-                lhs,
-                lhs,
-                rhs.as_ptr(),
-                &mut self.inner,
-            );
+            decnumber_sys::decNumberDivide(lhs, lhs, rhs.as_ptr(), &mut self.inner);
         }
     }
 
