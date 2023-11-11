@@ -19,6 +19,10 @@ Versioning].
   `Decimal`, `Decimal64`, and `Decimal128` types when the `num-traits` feature
   is enabled.
 
+## 0.4.9 - 2023-11-11
+
+* Fix several instances of potential memory unsafety.
+
 ## 0.4.8 - 2022-02-05
 
 * Expose `TryFromDecimalError`.
