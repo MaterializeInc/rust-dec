@@ -102,6 +102,7 @@ mod decimal128;
 mod decimal32;
 mod decimal64;
 mod error;
+mod macros;
 mod ordered;
 #[cfg(tests)]
 mod tests;
