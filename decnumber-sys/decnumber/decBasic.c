@@ -331,7 +331,7 @@ static decFloat * decDivide(decFloat *result, const decFloat *dfl,
     for (;;) {                // inner loop -- calculate quotient unit
       // strip leading zero units from acc (either there initially or
       // from subtraction below); this may strip all if exactly 0
-      for (; *msua==0 && msua>=lsua;) msua--;
+      for (; msua>=lsua && *msua==0;) msua--;
       accunits=(Int)(msua-lsua+1);                // [maybe 0]
       // subtraction is only necessary and possible if there are as
       // least as many units remaining in acc for this iteration as
@@ -505,7 +505,7 @@ static decFloat * decDivide(decFloat *result, const decFloat *dfl,
     // (must also continue to original lsu for correct quotient length)
     if (lsua>acc+DIVACCLEN-DIVOPLEN) continue;
     for (; msua>lsua && *msua==0;) msua--;
-    if (*msua==0 && msua==lsua) break;
+    if (msua==lsua && *msua==0) break;
     } // outer loop
 
   // all of the original operand in acc has been covered at this point
@@ -1533,8 +1533,8 @@ decFloat * decFloatAdd(decFloat *result,
         umsd=acc+COFF+DECPMAX-1;   // so far, so zero
         if (ulsd>umsd) {           // more to check
           umsd++;                  // to align after checked area
-          for (; UBTOUI(umsd)==0 && umsd+3<ulsd;) umsd+=4;
-          for (; *umsd==0 && umsd<ulsd;) umsd++;
+          for (; umsd+3<ulsd && UBTOUI(umsd)==0;) umsd+=4;
+          for (; umsd<ulsd && *umsd==0;) umsd++;
           }
         if (*umsd==0) {            // must be true zero (and diffsign)
           num.sign=0;              // assume +
@@ -2077,10 +2077,10 @@ decFloat * decFloatFMA(decFloat *result, const decFloat *dfl,
   // remove leading zeros on both operands; this will save time later
   // and make testing for zero trivial (tests are safe because acc
   // and coe are rounded up to uInts)
-  for (; UBTOUI(hi->msd)==0 && hi->msd+3<hi->lsd;) hi->msd+=4;
-  for (; *hi->msd==0 && hi->msd<hi->lsd;) hi->msd++;
-  for (; UBTOUI(lo->msd)==0 && lo->msd+3<lo->lsd;) lo->msd+=4;
-  for (; *lo->msd==0 && lo->msd<lo->lsd;) lo->msd++;
+  for (; hi->msd+3<hi->lsd && UBTOUI(hi->msd)==0;) hi->msd+=4;
+  for (; hi->msd<hi->lsd && *hi->msd==0;) hi->msd++;
+  for (; lo->msd+3<lo->lsd && UBTOUI(lo->msd)==0;) lo->msd+=4;
+  for (; lo->msd<lo->lsd && *lo->msd==0;) lo->msd++;
 
   // if hi is zero then result will be lo (which has the smaller
   // exponent), which also may need to be tested for zero for the
@@ -2242,8 +2242,8 @@ decFloat * decFloatFMA(decFloat *result, const decFloat *dfl,
       // all done except for the special IEEE 754 exact-zero-result
       // rule (see above); while testing for zero, strip leading
       // zeros (which will save decFinalize doing it)
-      for (; UBTOUI(lo->msd)==0 && lo->msd+3<lo->lsd;) lo->msd+=4;
-      for (; *lo->msd==0 && lo->msd<lo->lsd;) lo->msd++;
+      for (; lo->msd+3<lo->lsd && UBTOUI(lo->msd)==0;) lo->msd+=4;
+      for (; lo->msd<lo->lsd && *lo->msd==0;) lo->msd++;
       if (*lo->msd==0) {           // must be true zero (and diffsign)
         lo->sign=0;                // assume +
         if (set->round==DEC_ROUND_FLOOR) lo->sign=DECFLOAT_Sign;
