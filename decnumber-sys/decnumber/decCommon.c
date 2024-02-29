@@ -264,7 +264,7 @@ static decFloat * decFinalize(decFloat *df, bcdnum *num,
     // [this is quite expensive]
     if (*umsd==0) {
       for (; umsd+3<ulsd && UBTOUI(umsd)==0;) umsd+=4;
-      for (; *umsd==0 && umsd<ulsd;) umsd++;
+      for (; umsd<ulsd && *umsd==0;) umsd++;
       length=ulsd-umsd+1;                    // recalculate
       }
     drop=MAXI(length-DECPMAX, DECQTINY-num->exponent);
@@ -416,7 +416,7 @@ static decFloat * decFinalize(decFloat *df, bcdnum *num,
     // if exponent is >=emax may have to clamp, overflow, or fold-down
     if (num->exponent>DECEMAX-(DECPMAX-1)) { // is edge case
       // printf("overflow checks...\n");
-      if (*ulsd==0 && ulsd==umsd) {     // have zero
+      if (ulsd==umsd && *ulsd==0) {     // have zero
         num->exponent=DECEMAX-(DECPMAX-1); // clamp to max
         }
        else if ((num->exponent+length-1)>DECEMAX) { // > Nmax

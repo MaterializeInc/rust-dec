@@ -3467,7 +3467,8 @@ uByte * decNumberGetBCD(const decNumber *dn, uByte *bcd) {
       cut--;
       if (cut>0) continue;         // more in this unit
       up++;
-      u=*up;
+      if (ub > bcd)
+        u=*up;
       cut=DECDPUN;
       }
   #endif
@@ -4508,7 +4509,7 @@ static decNumber * decDivideOp(decNumber *res,
       for (;;) {                        // inner forever loop
         // strip leading zero units [from either pre-adjust or from
         // subtract last time around].  Leave at least one unit.
-        for (; *msu1==0 && msu1>var1; msu1--) var1units--;
+        for (; msu1>var1 && *msu1==0; msu1--) var1units--;
 
         if (var1units<var2ulen) break;       // var1 too low for subtract
         if (var1units==var2ulen) {           // unit-by-unit compare needed
