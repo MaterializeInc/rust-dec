@@ -22,9 +22,9 @@ Low-level bindings to libdecnumber.
 ```
 # Cargo.toml
 [dependencies]
-decnumber-sys = "0.1.5"
+decnumber-sys = "0.1.6"
 ```
 
-**[View documentation.](https://docs.rs/decnumber-sys/0.1.5/)**
+**[View documentation.](https://docs.rs/decnumber-sys/0.1.6/)**
 
 [libdecnumber]: http://speleotrove.com/decimal/decnumber.html

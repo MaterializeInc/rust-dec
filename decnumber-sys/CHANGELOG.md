@@ -5,6 +5,10 @@ All notable changes to this crate will be documented in this file.
 The format is based on [Keep a Changelog], and this crate adheres to [Semantic
 Versioning].
 
+## 0.1.6 - 2023-02-02
+
+* Fix potential memory unsafety ([#80]). Thanks, [@icmccorm] and [@def-]!
+
 ## 0.1.5 - 2020-03-10
 
 * Expose the lookup table for converting binary numbers 0-999 to their
@@ -34,6 +38,9 @@ Versioning].
 
 Initial release.
 
+[#80]: https://github.com/MaterializeInc/rust-dec/issues/80
+[@icmccorm]: https://github.com/icmccorm
+[@def-]: https://github.com/def-
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
 [errata]: http://speleotrove.com/decimal/decnumerr.html
