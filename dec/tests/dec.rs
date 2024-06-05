@@ -1983,7 +1983,7 @@ fn decnum_raw_parts_bcd() {
     fn inner(s: &str, o: Option<i128>) {
         const N: usize = 13;
         let mut cx = Context::<Decimal<N>>::default();
-        let mut d = cx.parse(s).unwrap();
+        let d = cx.parse(s).unwrap();
         let ret = d.to_packed_bcd();
         if d.is_special() {
             assert!(ret.is_none())

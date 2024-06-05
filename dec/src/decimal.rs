@@ -562,7 +562,7 @@ impl<const N: usize> Decimal<N> {
     /// (i.e. its negated exponent) or `None` for special values.
     ///
     /// [pd]: http://speleotrove.com/decimal/dnpack.html
-    pub fn to_packed_bcd(&mut self) -> Option<(Vec<u8>, i32)> {
+    pub fn to_packed_bcd(&self) -> Option<(Vec<u8>, i32)> {
         if self.is_special() {
             return None;
         }
@@ -579,7 +579,7 @@ impl<const N: usize> Decimal<N> {
                 bcd.as_mut_ptr() as *mut u8,
                 len.try_into().unwrap(),
                 &mut scale as *mut i32,
-                self.as_mut_ptr() as *mut decnumber_sys::decNumber,
+                self.as_ptr() as *const decnumber_sys::decNumber,
             )
         };
         // Null returned only for special values (already handled) or if `self`
