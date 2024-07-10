@@ -26,6 +26,7 @@ fn main() {
         .file("decnumber/decDouble.c")
         .file("decnumber/decQuad.c")
         .file("decnumber/decPacked.c")
+        .flag("-flto=thin")
         .out_dir(out_dir.join("lib"))
         .compile("decnumber");
 
