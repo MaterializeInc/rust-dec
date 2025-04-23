@@ -1400,13 +1400,18 @@ impl<const N: usize> Context<Decimal<N>> {
     where
         S: Into<Vec<u8>>,
     {
-        validate_n(N);
         let c_string = CString::new(s).map_err(|_| ParseDecimalError)?;
+        self.parse_c_str(c_string.as_c_str())
+    }
+
+    /// Parses a number from its string representation.
+    pub fn parse_c_str(&mut self, s: &CStr) -> Result<Decimal<N>, ParseDecimalError> {
+        validate_n(N);
         let mut d = Decimal::zero();
         unsafe {
             decnumber_sys::decNumberFromString(
                 d.as_mut_ptr() as *mut decnumber_sys::decNumber,
-                c_string.as_ptr(),
+                s.as_ptr(),
                 &mut self.inner,
             );
         };
