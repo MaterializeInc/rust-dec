@@ -16,7 +16,8 @@
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
-use std::fmt;
+use std::fmt::{self, LowerExp};
+use std::io::Write;
 use std::iter::{Product, Sum};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
@@ -1749,7 +1750,7 @@ impl<const N: usize> Context<Decimal<N>> {
     /// Both of these are guaranteed to fit comfortably within `Decimal`'s
     /// constraints.
     pub fn from_f32(&mut self, n: f32) -> Decimal<N> {
-        self.parse(n.to_string().as_str()).unwrap()
+        self.from_float(n)
     }
 
     /// Converts an `f64` to a `Decimal<N>`.
@@ -1761,7 +1762,45 @@ impl<const N: usize> Context<Decimal<N>> {
     /// Both of these are guaranteed to fit comfortably within `Decimal`'s
     /// constraints.
     pub fn from_f64(&mut self, n: f64) -> Decimal<N> {
-        self.parse(n.to_string().as_str()).unwrap()
+        self.from_float(n)
+    }
+
+    /// Converts a `f32` or a `f64` value to a `Decimal<N>`.
+    ///
+    /// Note that this conversion is infallible because `f64`'s:
+    /// - Maximum precision is ~18
+    /// - Min/max exponent is ~ -305, 305
+    ///
+    /// Both of these are guaranteed to fit comfortably within `Decimal`'s
+    /// constraints.
+    // NOTE: The code is generic over any T: LowerExp but passing something like f128 wouldn't
+    // always work since there are f128 values that don't fit in 24 bytes.
+    pub fn from_float<T: LowerExp>(&mut self, n: T) -> Decimal<N> {
+        // The maximum bytes needed to store the decimal representation of a f64.
+        // This is because you have at most:
+        // * 1 byte for a possible leading negative sign
+        // * 17 bytes of significant digits
+        //      See: https://stdrs.dev/nightly/x86_64-pc-windows-gnu/core/num/flt2dec/constant.MAX_SIG_DIGITS.html
+        // * 1 byte for a decimal point
+        // * 2 bytes for a negative exponent (e-)
+        // * 3 bytes for the largest possible exponent (308)
+        // An example of such maximal float value is f64::from_bits(0x8008000000000000) whose
+        // decimal representation is '-1.1125369292536007e-308'
+        const MAX_LEN: usize = 24;
+
+        // Create a buffer that can hold the longest float plus a nul character for the C string
+        let mut buf = [0u8; MAX_LEN + 1];
+        let mut unwritten = &mut buf[..MAX_LEN];
+        write!(unwritten, "{:e}", n).unwrap();
+        let unwritten_len = unwritten.len();
+        // SAFETY:
+        //  * buf was zero-initialized
+        //  * Exactly MAX_LEN - unwritten.len() bytes have been modified
+        //  * Formatting a float never writes nul characters
+        //  Therefore the produced slice contains exactly one nul character
+        let c_buf =
+            unsafe { CStr::from_bytes_with_nul_unchecked(&buf[..MAX_LEN - unwritten_len + 1]) };
+        self.parse_c_str(c_buf).unwrap()
     }
 
     /// Computes the digitwise logical inversion of `n`, storing the result in
