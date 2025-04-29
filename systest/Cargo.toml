@@ -10,4 +10,4 @@ decnumber-sys = { path = "../decnumber-sys" }
 libc = "0.2.68"
 
 [build-dependencies]
-ctest = "0.2"
+ctest = "0.4"
