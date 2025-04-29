@@ -15,7 +15,7 @@
 
 use std::convert::TryFrom;
 
-use criterion::{criterion_group, criterion_main, Bencher, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
 use rand::{thread_rng, Rng};
 
 use dec::{Context, Decimal, Decimal128, Decimal64};
@@ -40,6 +40,17 @@ pub fn bench_decode(c: &mut Criterion) {
     let mut cx = Context::<Decimal128>::default();
     let d128 = cx.from_i128(rng.gen());
     c.bench_function("decode_decimal128", |b| bench_decode_decimal128(d128, b));
+}
+
+pub fn bench_parse(c: &mut Criterion) {
+    let mut cx = Context::<Decimal<13>>::default();
+    c.bench_function("parse_decimal", |b| {
+        b.iter(|| {
+            black_box(cx.from_f64(black_box(f64::MIN)));
+            black_box(cx.from_f64(black_box(f64::from_bits(0x8008000000000000))));
+            black_box(cx.from_f64(black_box(f64::MAX)));
+        })
+    });
 }
 
 pub fn bench_to_string(d: Decimal128, b: &mut Bencher) {
@@ -177,5 +188,11 @@ pub fn bench_tryinto_primitive(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_decode, bench_print, bench_tryinto_primitive);
+criterion_group!(
+    benches,
+    bench_decode,
+    bench_print,
+    bench_tryinto_primitive,
+    bench_parse
+);
 criterion_main!(benches);
