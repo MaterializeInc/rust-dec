@@ -10,7 +10,7 @@ libdecnumber.
 ```
 # Cargo.toml
 [dependencies]
-dec = "0.4.9"
+dec = "0.4.10"
 ```
 
 **[View documentation.](https://docs.rs/dec/0.4.9/)**
