@@ -34,3 +34,9 @@
   (cd dec && cargo publish)
   (cd decnumber-sys && cargo publish)
   ```
+
+# Release permissions
+
+In order to successfully complete the `cargo publish` steps you must be a
+member of the "Crate owners" Github team and use an appropriate token through
+`cargo login`.

@@ -28,3 +28,7 @@ decnumber-sys = "0.1.6"
 **[View documentation.](https://docs.rs/decnumber-sys/0.1.6/)**
 
 [libdecnumber]: http://speleotrove.com/decimal/decnumber.html
+
+## Releasing
+
+See `RELEASING.md` for instruction on how to release these crates.
