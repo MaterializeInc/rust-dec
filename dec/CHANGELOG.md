@@ -7,6 +7,10 @@ Versioning].
 
 ## Unreleased
 
+## 0.4.10 - 2025-05-06
+
+* Optimize `Decimal::<N>::from_f{64,32}`.
+
 * Provide a `serde`-compatible module, `dec::serde_decimal_from_non_float_primitives`, to permit
   deserializing `Decimal` values from primitive integers, `String`, and `str`.
   
