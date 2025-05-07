@@ -16,7 +16,7 @@
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
-use std::fmt::{self, LowerExp};
+use std::fmt::{self, Display, LowerExp};
 use std::io::Write;
 use std::iter::{Product, Sum};
 use std::marker::PhantomData;
@@ -1775,23 +1775,16 @@ impl<const N: usize> Context<Decimal<N>> {
     /// constraints.
     // NOTE: The code is generic over any T: LowerExp but passing something like f128 wouldn't
     // always work since there are f128 values that don't fit in 24 bytes.
-    pub fn from_float<T: LowerExp>(&mut self, n: T) -> Decimal<N> {
+    pub fn from_float<T: LowerExp + Display>(&mut self, n: T) -> Decimal<N> {
         // The maximum bytes needed to store the decimal representation of a f64.
-        // This is because you have at most:
-        // * 1 byte for a possible leading negative sign
-        // * 17 bytes of significant digits
-        //      See: https://stdrs.dev/nightly/x86_64-pc-windows-gnu/core/num/flt2dec/constant.MAX_SIG_DIGITS.html
-        // * 1 byte for a decimal point
-        // * 2 bytes for a negative exponent (e-)
-        // * 3 bytes for the largest possible exponent (308)
-        // An example of such maximal float value is f64::from_bits(0x8008000000000000) whose
-        // decimal representation is '-1.1125369292536007e-308'
-        const MAX_LEN: usize = 24;
+        // We follow stdlib's buffer size of 1024 bytes.
+        // See: https://github.com/rust-lang/rust/blob/1.86.0/library/core/src/fmt/float.rs#L37
+        const MAX_LEN: usize = 1024;
 
         // Create a buffer that can hold the longest float plus a nul character for the C string
         let mut buf = [0u8; MAX_LEN + 1];
         let mut unwritten = &mut buf[..MAX_LEN];
-        write!(unwritten, "{:e}", n).unwrap();
+        write!(unwritten, "{}", n).unwrap();
         let unwritten_len = unwritten.len();
         // SAFETY:
         //  * buf was zero-initialized
