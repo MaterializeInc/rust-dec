@@ -7,6 +7,10 @@ Versioning].
 
 ## Unreleased
 
+## 0.4.11 - 2025-05-06
+
+* Fix breaking behavior of `f64` to `Decimal::<N>` conversion introduced in `0.4.9`
+
 ## 0.4.10 - 2025-05-06
 
 * Optimize `Decimal::<N>::from_f{64,32}`.
